@@ -102,6 +102,7 @@ resources for each.
 
   - [[https://www.masteringemacs.org/][Mastering Emacs]] is a book describing effective use of Emacs; its [[https://www.masteringemacs.org/reading-guide][reading
     guide]] describes the best way to start learning.
+  - [[http://emacsrocks.com/][Emacs Rocks!]] -- a series of helpful emacs videos
   - The [[https://www.gnu.org/software/emacs/manual/][Emacs manuals]] are extensive and detailed.
   - [[http://spacemacs.org/][Spacemacs]] is a fancy adaptation of Emacs to make it feel more modern and
     integrated.
