@@ -1,7 +1,11 @@
 #+TITLE: 36-750 Course Documents
 
-This repository contains design and practices checklists, the course rubric
-and syllabus, and lecture notes for each class.
+This repository contains:
+
+- =Checklists/=: Code design and practices checklists, used when grading your work
+- =ClassFiles/=: Code and data files used for in-class activities
+- =Info/=: The course rubric and syllabus, plus programming resources and links
+- =Lectures/=: Lecture notes for each class
 
 * Contact Info
 
