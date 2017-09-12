@@ -10,7 +10,7 @@ probably use some mixture of the two.
 
 There is an enormous variety of editors and IDEs available. Some popular IDEs
 include RStudio (R), [[https://www.jetbrains.com/pycharm/][PyCharm]] (Python), [[https://eclipse.org/][Eclipse]] (Java), [[https://cursive-ide.com/][Cursive]] (Clojure),
-[[https://www.jetbrains.com/idea/][IntelliJ]] (JVM languages), [[https://www.visualstudio.com/][VisualStudio]] (C++), and [[https://www.jetbrains.com/webstorm/][WebStorm]] (Javascript). [[https://jupyter.org/][Jupyter]]
+[[https://www.jetbrains.com/idea/][IntelliJ]] (JVM languages), [[https://www.visualstudio.com/][VisualStudio]] (C++), and [[https://www.jetbrains.com/webstorm/][WebStorm]] (JavaScript). [[https://jupyter.org/][Jupyter]]
 provides a notebook interface for Python and several other languages, with some
 IDE tools.
 
@@ -73,10 +73,10 @@ resources for each.
   underlining. In other words, the engineer-hours that, in the case of Microsoft
   Word, were devoted to features like mail merge, and the ability to embed
   feature-length motion pictures in corporate memoranda, were, in the case of
-  emacs, focused with maniacal intensity on the deceptively simple-seeming
+  Emacs, focused with maniacal intensity on the deceptively simple-seeming
   problem of editing text. If you are a professional writer – i.e., if someone
   else is getting paid to worry about how your words are formatted and printed –
-  emacs outshines all other editing software in approximately the same way that
+  Emacs outshines all other editing software in approximately the same way that
   the noonday sun does the stars. It is not just bigger and brighter; it simply
   makes everything else vanish.
   #+END_QUOTE
