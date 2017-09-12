@@ -1,0 +1,65 @@
+#+TITLE: Unit Testing \\
+#+TITLE: Statistics 650/750 \\
+#+TITLE: Week 3 Tuesday
+#+DATE: 12 Sep 2017
+#+AUTHOR: Alex Reinhart and Christopher Genovese
+
+* Announcements
+
+  - We're soon going to be doing a lot more programming: if you have little
+    previous programming experience, please talk to us ASAP
+  - Assignment categories added; see =problem-bank/README.org= for details
+  - Resources on text editors and programming languages added to =documents/Info=
+  - You should merge your assignments to the =master= branch /after/ they're marked
+    Approved
+  - Please use descriptive pull request titles -- indicate which assignment
+    they're for at least. Think of a PR as an email to a real person, asking
+    them to review your code
+  - Turn on RStudio's R style diagnostics if you're using it
+    - under Preferences/Options -> Code -> Diagnostics -> Provide R style diagnostics
+  - Use unit testing in future assignments
+  - Office hours!
+
+    | Day       |      Time | Person | Location |
+    |-----------+-----------+--------+----------|
+    | Monday    | 2:30-3:30 | Chris  | BH 232E  |
+    | Tuesday   |       4-5 | Justin | BH 232K  |
+    | Wednesday | 1:30-2:30 | Chris  | BH 232E  |
+    | Wednesday | 2:30-3:30 | Alex   | BH 132Q  |
+    | Thursday  |       3-4 | Chris  | BH 232E  |
+    | Friday    | 2:30-3:30 | Alex   | BH 132A  |
+
+    And you can always email us or catch us after class for appointments.
+
+* A Tip for Windows Users
+
+  You can have Git use Notepad as its default editor for commit messages:
+
+  #+BEGIN_SRC sh
+    git config --global core.editor notepad
+  #+END_SRC
+
+  No more getting stuck in Vim!
+
+* Unit Testing
+
+  #+INCLUDE: "../Topics/unit-testing.org" :minlevel 2
+
+
+* Extras                                                                                          :noexport:ARCHIVE:
+
+#+OPTIONS: H:3 num:nil toc:nil
+
+# Local Variables:
+# org-latex-packages-alist: (("" "tikz" t) ("" "tabu" nil) ("" "minted" nil) ("" "geometry" nil))
+# org-latex-minted-options:(("mathescape" "") ("linenos" "") ("numbersep" "5pt") ("gobble" "0") ("frame" "lines") ("framesep" "2mm"))
+# org-latex-listings: minted
+# org-latex-default-table-environment: tabu
+# org-latex-create-formula-image-program: imagemagick
+# org-latex-pdf-process: ("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f" "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f" "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f")
+# org-image-actual-width: nil
+# org-hide-emphasis-markers: t
+# org-export-filter-strike-through-functions: (my/latex-strike-through-filter)
+# End:
+
+
