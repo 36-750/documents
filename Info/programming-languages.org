@@ -1,0 +1,159 @@
+#+TITLE: Programming Language Resources
+#+AUTHOR: Alex Reinhart and Christopher Genovese
+#+DATE: 11 Sep 2017
+
+Part of the joy of programming is realizing that there are many different
+programming languages, many of which have very different ways of expressing
+computational ideas. The structure of a language and the constraints it imposes
+affect how you think about and approach problems. Learning a new language,
+especially one very different from one you are familiar with, opens up new ways
+of thinking. (This is a technological version of the [[http://www.linguisticsociety.org/resource/language-and-thought][Sapir-Whorf hypothesis]].)
+
+We encourage you to experiment with an unfamiliar programming language in this
+course. There are a couple of ways to choose a language to try:
+
+1. Pick one which complements what you know. C++, for example, can seamlessly
+   integrate with R using [[http://rcpp.org/][Rcpp]], so you may want to learn it so you can write
+   fast C++ code for the core of an algorithm to be used in R. JavaScript can be
+   used for interactive data visualizations and apps on the Web, and may fit
+   with data analysis you do in another language.
+2. Pick one which stretches your brain in a new and different direction. Any
+   variant of Lisp, for example, is reputed to [[http://www.paulgraham.com/avg.html][bring profound enlightenment]];
+   more pure functional languages like Haskell, OCaml, or F# bring a very
+   different way of thinking than typical R or Python.
+
+Here we provide some resources for those interested in different languages. Some
+of the books referenced below are part of the statistics student library, in the
+graduate student offices.
+
+If you want to know what these languages (and many others) look like, look
+around at [[https://rosettacode.org/wiki/Rosetta_Code][Rosetta Code]], which presents solutions to programming problems in
+hundreds of different languages. (Don't get carried away; many of the languages
+are esoteric and rarely used.)
+
+* R
+
+  The quintessential statistical programming language which you've probably
+  already seen. Some resources:
+
+  - [[https://www.r-project.org/][R-Project.org]]
+  - The [[https://cran.r-project.org/][Comprehensive R Archive Network]], with packages for nearly any
+    statistical task you'd ever want. Also check out the [[https://cran.r-project.org/web/views/][task views]], detailed
+    overviews of packages for specific subjects.
+  - /The Art of R Programming/, by Norman Matloff, an introduction to R that
+    quickly advances to high-level concepts.
+  - /The Book of R/, by Tilman Davies, a more basic comprehensive introduction to
+    R.
+  - [[http://adv-r.had.co.nz/][Advanced R]], by Hadley Wickham, covering the more esoteric and advanced
+    features of R.
+  - [[https://www.johndcook.com/blog/r_language_for_programmers/][R Language for Programmers]], a quick review of some of R's features for those
+    who already know another language.
+
+* Python
+
+  Another very popular dynamic language.
+
+  - [[https://www.python.org/][Python.org]]
+  - [[https://jupyter.org/][Jupyter]], a project providing a web notebook interface to writing Python (and
+    other) code.
+  - [[http://www.numpy.org/][NumPy]], a library for /n/-dimensional arrays and matrices, plus linear algebra
+    functions. The foundation of all other scientific packages for Python.
+  - [[https://scipy.org/][SciPy]], an extensive collection of mathematical and scientific functions for
+    Python.
+  - [[http://pandas.pydata.org/][pandas]], a package providing high-performance data frames and time series
+    tools.
+  - [[http://www.statsmodels.org/stable/index.html][statsmodels]], a collection of statistical models implemented in Python.
+  - [[http://scikit-learn.org/stable/][scikit-learn]], machine learning algorithms in Python.
+  - /Python Crash Course/, by Eric Matthes, a well-regarded introduction to
+    programming in Python.
+  - /Automate the Boring Stuff with Python/, by Al Sweigart, an introduction to
+    using Python for automating boring repeated tasks, like scraping data off
+    websites, organizing files, or fiddling with images.
+
+* Julia
+
+  A brand-new language for scientific computing, intended to be as flexible and
+  easy to use as R or Python, but without giving up speed close to C or Fortran.
+  Julia is still changing rapidly and hasn't had its 1.0 release, so a lot of
+  tutorials are out of date. Nonetheless:
+
+  - [[https://julialang.org/][Julia's website]]
+  - The [[https://docs.julialang.org/en/stable/][Julia Manual]]
+  - [[https://github.com/scidom/StatsLearningByExample.jl][StatsLearningByExample.jl]], in the form of [[https://jupyter.org/][Jupyter]] notebooks demonstrating
+    Julia by example.
+  - [[http://bogumilkaminski.pl/files/julia_express.pdf][Julia Express]], by Bogumił Kamiński, a lightning-fast introduction for those
+    already familiar with other languages.
+
+* Racket
+
+  A descendant of the age-old Scheme programming language, with many modern
+  features and a fairly extensive standard library. Provides many tools for
+  building your own small programming languages to solve specific problems, like
+  [[https://docs.racket-lang.org/datalog/Tutorial.html][Datalog]], a logic programming language.
+
+  - [[http://racket-lang.org/][Racket-lang.org]]
+  - The [[https://docs.racket-lang.org/guide/][Racket Guide]]
+  - [[http://www.ccs.neu.edu/home/matthias/HtDP2e/][How to Design Programs]], a textbook introducing Racket from scratch while
+    also teaching the basic principles of program design.
+  - /Realm of Racket/, by a host of authors, an introduction to Racket through
+    games (and cartoons).
+  - Matthew Butterick's [[http://beautifulracket.com/][Beautiful Racket]], an introduction to Racket by building
+    a series of simple programming languages.
+  - Matthew Butterick's [[http://beautifulracket.com/appendix/why-racket-why-lisp.html][Why Racket? Why Lisp?]], an elegant argument for the
+    virtue of Racket, Lisp, and related languages (like Clojure, below).
+
+* Clojure
+
+  A modern descendant of Lisp (from the same family as Scheme, and hence
+  Racket), running on the industrial-strength Java Virtual Machine.
+
+  - [[https://clojure.org/][Clojure.org]]
+  - /The Joy of Clojure/, by Chris Houser and Michael Fogus, an introduction to
+    programming in Clojure.
+  - [[https://www.braveclojure.com/][Clojure for the Brave and True]], by Daniel Higginbotham, an introduction to
+    "the most powerful and fun programming language on the planet" via Vikings.
+
+* Haskell
+
+  Lisp advocates believe Lisp is the path to enlightenment; Haskell advocates
+  would beg to differ. A functional programming language heavily rooted in
+  mathematics, with an advanced type system which allows the compiler detect
+  many types of bugs before the code even runs.
+
+  - [[http://learnyouahaskell.com/][Learn You a Haskell for Great Good!]], by Miran Lipovača, a slightly silly
+    (but good!) introduction to Haskell.
+  - [[http://book.realworldhaskell.org/][Real World Haskell]], by Bryan O'Sullivan, Don Stewart, and John Goerzen, a
+    more serious in-depth book.
+  - [[https://bartoszmilewski.com/2014/10/28/category-theory-for-programmers-the-preface/][Category Theory for Programmers]], a blog series by Bartosz Milewski,
+    explaining the mathematical theory underpinning Haskell and many of its most
+    advanced features, and also helping you understand why Haskell programmers
+    make jokes like "A monad is just a monoid in the category of endofunctors,
+    what's the problem?"
+
+* JavaScript
+
+  The language of the Web. JavaScript is understood by every web browser, so
+  it's widely used for interactive features on web pages, but also much more --
+  server software, apps, and everything in between has been written in
+  JavaScript.
+
+  - [[https://d3js.org/][d3.js]], a library widely used for interactive graphics involving data.
+  - [[https://developer.mozilla.org/en-US/docs/Web/JavaScript][MDN's JavaScript documentation]], featuring both tutorials and a complete
+    reference to JavaScript's library.
+  - [[http://eloquentjavascript.net/][Eloquent JavaScript]], by Marijn Haverbeke, a detailed introduction to
+    the language.
+
+* Rust
+
+  A low-level systems programming language, intended as a replacement for C and
+  C++ which uses a strong type system to prevent crashes and security bugs.
+  Fairly new and still being improved upon. If you're thinking of writing
+  high-performance servers, desktop and command-line applications, or highly
+  parallel programs, Rust may be worth a look.
+
+  - [[https://www.rust-lang.org/en-US/][Rust-lang.org]]
+  - [[https://doc.rust-lang.org/book/second-edition/][The Rust Programming Language]], a (draft) book introducing Rust.
+  - /Programming Rust/, by Jim Blandy and Jason Orendorff, another book
+    introducing Rust.
+  - [[https://rustbyexample.com/][Rust by Example]], a collection of Rust examples which can even be run in
+    your browser.

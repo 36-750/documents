@@ -1,0 +1,137 @@
+#+TITLE: Setting Up Text Editors
+#+DATE: 11 Sep 2017
+#+AUTHOR: Alex Reinhart and Christopher Genovese
+
+An *editor* is a general-purpose tool for editing files and many other tasks. An
+IDE*, or Integrated Development Environment, provides an interface and tools for
+managing projects in a specific language or framework. Both have advantages as
+environments within which to construct your software, and in reality you will
+probably use some mixture of the two.
+
+There is an enormous variety of editors and IDEs available. Some popular IDEs
+include RStudio (R), [[https://www.jetbrains.com/pycharm/][PyCharm]] (Python), [[https://eclipse.org/][Eclipse]] (Java), [[https://cursive-ide.com/][Cursive]] (Clojure),
+[[https://www.jetbrains.com/idea/][IntelliJ]] (JVM languages), [[https://www.visualstudio.com/][VisualStudio]] (C++), and [[https://www.jetbrains.com/webstorm/][WebStorm]] (Javascript). [[https://jupyter.org/][Jupyter]]
+provides a notebook interface for Python and several other languages, with some
+IDE tools.
+
+Text editors are more general. Here are a few to choose from, plus some tips and
+resources for each.
+
+* RStudio
+
+  Available from [[https://www.rstudio.com/][RStudio.com]]. RStudio Desktop is free and open source and works
+  on Mac, Windows and Linux.
+
+  (Okay, so this is an IDE, not just a text editor, but it's important enough.)
+
+  An integrated development environment for R, featuring integrated help
+  features, an R console, a plot viewer, and support for [[http://rmarkdown.rstudio.com/][R Markdown]]. RStudio is
+  the most widely used editor for R code; if you plan to use R a lot, you may
+  want to give RStudio a try.
+
+  Tips:
+
+  - RStudio has support for Git, meaning you can use menus and buttons to run
+    Git commands from inside RStudio. View [[https://support.rstudio.com/hc/en-us/articles/200532077-Version-Control-with-Git-and-SVN][the documentation]] for more details.
+  - RStudio can show code diagnostics -- like a grammar checker for your code,
+    these diagnostics point out spacing problems, bad indentation, and other
+    style issues. View [[https://support.rstudio.com/hc/en-us/articles/205753617-Code-Diagnostics][the documentation]] to see how to turn them on.
+
+* Visual Studio Code
+
+  Available [[https://code.visualstudio.com/][from Microsoft]]. Free and open source, works on Mac, Windows, and
+  Linux.
+
+  A fairly new, popular text editor for many programming languages. Supports
+  [[https://marketplace.visualstudio.com/VSCode][extensions which add support for new languages]] (such as an [[https://marketplace.visualstudio.com/items?itemName=Ikuyadeu.r][R extension]] and a
+  [[https://marketplace.visualstudio.com/items?itemName=donjayamanne.python][Python extension]]), and has built-in Git support.
+
+* Atom
+
+  Available from [[https://atom.io/][Atom.io]]; free and open source. Works on Mac, Windows, and
+  Linux. Made by the same people who run GitHub.
+
+  Similar to Visual Studio Code in that it has plugins and integrated Git
+  support (what else would you expect from the GitHub people?). Unfortunately
+  the R plugin is abandoned and not maintained, but many other languages have
+  good plugins you can use.
+
+* Emacs
+
+  Available [[https://www.gnu.org/software/emacs/][from GNU]] for Windows and Linux; a better Mac OS X version is
+  available [[https://emacsformacosx.com/][separately]]. Free and open source.
+
+  Chris and Alex both use Emacs. It has a somewhat fanatical following, best
+  explained by this quote from Neal Stephenson's [[http://www.cryptonomicon.com/beginning.html][In the Beginning was the
+  Command Line]] (also recommended reading):
+
+  #+BEGIN_QUOTE
+  I use Emacs, which might be thought of as a thermonuclear word processor. It
+  was created by [[https://en.wikipedia.org/wiki/Richard_Stallman][Richard Stallman]]; enough said. It is written in Lisp, which is
+  the only computer language that is beautiful. It is colossal, and yet it only
+  edits straight ASCII text files, which is to say, no fonts, no boldface, no
+  underlining. In other words, the engineer-hours that, in the case of Microsoft
+  Word, were devoted to features like mail merge, and the ability to embed
+  feature-length motion pictures in corporate memoranda, were, in the case of
+  emacs, focused with maniacal intensity on the deceptively simple-seeming
+  problem of editing text. If you are a professional writer – i.e., if someone
+  else is getting paid to worry about how your words are formatted and printed –
+  emacs outshines all other editing software in approximately the same way that
+  the noonday sun does the stars. It is not just bigger and brighter; it simply
+  makes everything else vanish.
+  #+END_QUOTE
+
+  Emacs can be molded, through packages and custom code, to do just about
+  anything. [[https://ess.r-project.org/][Emacs Speaks Statistics]] provides support for editing R and an
+  interactive R console; [[https://magit.vc/][Magit]] is probably the best Git interface ever
+  integrated into a text editor; and there are packages for everything from
+  editing Python to sending email to playing Tetris. Another killer feature is
+  [[http://orgmode.org/][Org mode]], the system we use to write lecture notes, and which is great for
+  managing to-do lists, outlining ideas, and taking notes.
+
+  However, Emacs has been under development since the 1970s, and carries much of
+  its history around. (The Emacs Git repository has history that stretches back
+  over 30 years and has more than 130,000 commits and 600 committers.) It
+  predates standard keyboard shortcuts like Ctrl-S and has its own ideas about
+  user interfaces. It takes a while to understand Emacs's way of working and
+  learn how to use it. You will be able to make it do anything you want, but you
+  must be willing to put in the effort to learn how to do so. The effort will be
+  repaid in the end.
+
+  Some resources:
+
+  - [[https://www.masteringemacs.org/][Mastering Emacs]] is a book describing effective use of Emacs; its [[https://www.masteringemacs.org/reading-guide][reading
+    guide]] describes the best way to start learning.
+  - The [[https://www.gnu.org/software/emacs/manual/][Emacs manuals]] are extensive and detailed.
+  - [[http://spacemacs.org/][Spacemacs]] is a fancy adaptation of Emacs to make it feel more modern and
+    integrated.
+  - The [[https://github.com/bbatsov/prelude][Emacs Prelude]], a bundle of pre-configured packages and shortcuts to
+    start your Emacs with.
+  - [[https://github.com/technomancy/better-defaults][better-defaults]], a set of small tweaks and packages to make Emacs behave
+    better out of the box.
+
+  We are, of course, happy to help you with any Emacs questions you have. But
+  try not to get so caught up in customizing Emacs that you don't get any actual
+  work done.
+
+* Vim
+
+  Available [[https://vim.sourceforge.io/][here]], but likely already installed on your computer -- it comes with
+  Git Bash for Windows, is included on Mac OS X, and is included with most Linux
+  distributions. Free and open source. It is notorious because [[https://stackoverflow.blog/2017/05/23/stack-overflow-helping-one-million-developers-exit-vim/][most people can't
+  figure out how to even exit it]].
+
+  Vim is minimal and simple, focusing on making motion through and manipulation
+  of text fast and powerful. It supports extensions written in VimScript. By
+  default it doesn't have much fancy stuff, like an R console or diagnostics,
+  but this can be added with plugins.
+
+  Vim users, accusing Emacs of being too large and complicated, accuse it of
+  being "a great operating system, lacking only a decent editor." Vim claims to
+  be the decent editor needed.
+
+  Resources:
+
+  - Vim comes with a program called =vimtutor=, which guides you through a tutorial.
+  - The [[http://vim.wikia.com/wiki/Vim_Tips_Wiki][Vim Tips Wiki]] is, well, a wiki full of tips.
+  - [[https://vim-adventures.com/][Vim Adventures]] is a game which teaches you the basics of Vim.
