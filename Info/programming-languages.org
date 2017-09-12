@@ -106,12 +106,36 @@ are esoteric and rarely used.)
 
   A modern descendant of Lisp (from the same family as Scheme, and hence
   Racket), running on the industrial-strength Java Virtual Machine.
+  (This language also runs on the web atop Javascript as *Clojurescript*.)
 
-  - [[https://clojure.org/][Clojure.org]]
-  - /The Joy of Clojure/, by Chris Houser and Michael Fogus, an introduction to
-    programming in Clojure.
+  Like other Lisps, Clojure uses a prefix style, so whereas
+  you might right a function call in R or C as
+  #+begin_example
+     func(arg1, arg2, arg3)
+  #+end_example
+  in Clojure, you just move the first parenthesis before function name,
+  like
+  #+begin_example
+     (func arg1, arg2, arg3)
+  #+end_example
+  and you can even drop the commas if you like (though you don't have to)
+  #+begin_example
+     (func arg1 arg2 arg3)
+  #+end_example
+  That small change makes Clojure (and other Lisp) syntax very easy to
+  use. You see more parentheses, but after a short time, many advantages
+  for working with code structured this way will become clear.
+
+
+  Resources:  
+
+  - [[https://clojure.org/][Clojure.org]], the main language site. See also [[https://clojurescript.org/][ClojureScript.org]]
+    for the version of the language that compiles to javascript and is
+    outstanding for web apps.
   - [[https://www.braveclojure.com/][Clojure for the Brave and True]], by Daniel Higginbotham, an introduction to
     "the most powerful and fun programming language on the planet" via Vikings.
+  - /The Joy of Clojure/, by Chris Houser and Michael Fogus, an introduction to
+    programming in Clojure.
 
 * Haskell
 
