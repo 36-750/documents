@@ -58,12 +58,13 @@ resources for each.
 
 * Emacs
 
-  Available [[https://www.gnu.org/software/emacs/][from GNU]] for Windows and Linux; a better Mac OS X version is
-  available [[https://emacsformacosx.com/][separately]]. Free and open source.
+  Available [[https://www.gnu.org/software/emacs/][from GNU]] for Windows, Linux, and Mac OS X. A version built specially
+  for Mac OS X is available [[https://emacsformacosx.com/][separately]] and preferred by some people. Can also
+  be installed on Mac OS X through [[https://brew.sh/][homebrew]]. *Free and open source.*
 
-  Chris and Alex both use Emacs. It has a somewhat fanatical following, best
-  explained by this quote from Neal Stephenson's [[http://www.cryptonomicon.com/beginning.html][In the Beginning was the
-  Command Line]] (also recommended reading):
+  Chris and Alex both use Emacs. It has a somewhat fanatical following,
+  best explained by this quote from Neal Stephenson's piece
+  [[http://www.cryptonomicon.com/beginning.html][In the Beginning was the Command Line]] (also recommended reading):
 
   #+BEGIN_QUOTE
   I use Emacs, which might be thought of as a thermonuclear word processor. It
@@ -95,7 +96,7 @@ resources for each.
   predates standard keyboard shortcuts like Ctrl-S and has its own ideas about
   user interfaces. It takes a while to understand Emacs's way of working and
   learn how to use it. You will be able to make it do anything you want, but you
-  must be willing to put in the effort to learn how to do so. The effort will be
+  must be willing to put in some effort to learn how to do so. The effort will be
   repaid in the end.
 
   Some resources:
@@ -150,3 +151,7 @@ resources for each.
 
   
 
+* Sublime Text
+  Available [[https://www.sublimetext.com/][here]]. Proprietary software, costs roughly $70 for a license.
+  A popular and nice looking editor with many slick features.
+  
