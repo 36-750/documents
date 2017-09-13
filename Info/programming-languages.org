@@ -54,6 +54,8 @@ are esoteric and rarely used.)
   Another very popular dynamic language.
 
   - [[https://www.python.org/][Python.org]]
+  - The Python [[https://docs.python.org/3/][documentation]] is quite good, including the [[https://docs.python.org/3/tutorial/index.html][tutorial]] and the
+    [[https://docs.python.org/3/library/index.html][library reference]].
   - [[https://jupyter.org/][Jupyter]], a project providing a web notebook interface to writing Python (and
     other) code.
   - [[http://www.numpy.org/][NumPy]], a library for /n/-dimensional arrays and matrices, plus linear algebra
@@ -126,11 +128,10 @@ are esoteric and rarely used.)
   use. You see more parentheses, but after a short time, many advantages
   for working with code structured this way will become clear.
 
-
-  Resources:  
+  Resources:
 
   - [[https://clojure.org/][Clojure.org]], the main language site. See also [[https://clojurescript.org/][ClojureScript.org]]
-    for the version of the language that compiles to javascript and is
+    for the version of the language that compiles to JavaScript and is
     outstanding for web apps.
   - [[https://www.braveclojure.com/][Clojure for the Brave and True]], by Daniel Higginbotham, an introduction to
     "the most powerful and fun programming language on the planet" via Vikings.
