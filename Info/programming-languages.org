@@ -106,9 +106,9 @@ are esoteric and rarely used.)
 
   A modern descendant of Lisp (from the same family as Scheme, and hence
   Racket), running on the industrial-strength Java Virtual Machine.
-  (This language also runs on the web atop Javascript as *Clojurescript*.)
+  (This language also runs on the web atop Javascript as *ClojureScript*.)
 
-  Like other Lisps, Clojure uses a prefix style, so whereas
+  Like other Lisps (and Racket), Clojure uses a prefix style, so whereas
   you might right a function call in R or C as
   #+begin_example
      func(arg1, arg2, arg3)

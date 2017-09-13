@@ -137,6 +137,7 @@ resources for each.
   - Vim comes with a program called =vimtutor=, which guides you through a tutorial.
   - The [[http://vim.wikia.com/wiki/Vim_Tips_Wiki][Vim Tips Wiki]] is, well, a wiki full of tips.
   - [[https://vim-adventures.com/][Vim Adventures]] is a game which teaches you the basics of Vim.
+
 * Spacemacs
 
   [[http://spacemacs.org/][Spacemacs]] is a pre-customized version of Emacs that integrates many of
@@ -147,11 +148,6 @@ resources for each.
 
   This is a more than reasonable starting default editor.
 
-  
-
-  
-
 * Sublime Text
   Available [[https://www.sublimetext.com/][here]]. Proprietary software, costs roughly $70 for a license.
   A popular and nice looking editor with many slick features.
-  
