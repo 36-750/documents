@@ -1,0 +1,26 @@
+(source gnu)
+(source melpa)
+(source melpa-stable)
+(source org)
+
+(depends-on "use-package")
+(depends-on "s")
+(depends-on "dash")
+(depends-on "f")
+(depends-on "ht")
+
+(depends-on "bind-key")
+(depends-on "diminish")
+(depends-on "hydra")
+(depends-on "pallet")
+
+(depends-on "paradox")
+(depends-on "ivy")
+(depends-on "company")
+(depends-on "helm")
+
+(depends-on "ess")
+(depends-on "auctex")
+(depends-on "org-plus-contrib")
+(depends-on "org-ref")
+
