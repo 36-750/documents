@@ -104,16 +104,16 @@ symbol. For the moment, all *nix variants are converted to
 
 ;;; Keybindings
 
-(cl-macrolet ((by-five (cmd)            ; Move more quickly
-                       `(lambda ()
-                          (interactive)
-                          (ignore-errors (,cmd 5)))))
-  (bind-key "C-S-n" (by-five next-line))
-  (bind-key "C-S-p" (by-five previous-line))
-  (bind-key "C-S-f" (by-five forward-char))
-  (bind-key "C-S-b" (by-five backward-char))
-  (bind-key [(meta shift ?f)] (by-five forward-word))
-  (bind-key [(meta shift ?b)] (by-five backward-word)))
+;;(cl-macrolet ((by-five (cmd)            ; Move more quickly
+;;                       `(lambda ()
+;;                          (interactive)
+;;                          (ignore-errors (,cmd 5)))))
+;;  (bind-key "C-S-n" (by-five next-line))
+;;  (bind-key "C-S-p" (by-five previous-line))
+;;  (bind-key "C-S-f" (by-five forward-char))
+;;  (bind-key "C-S-b" (by-five backward-char))
+;;  (bind-key [(meta shift ?f)] (by-five forward-word))
+;;  (bind-key [(meta shift ?b)] (by-five backward-word)))
 
 (global-set-key (kbd "M-/") 'hippie-expand)
 (global-set-key (kbd "C-x C-b") 'ibuffer)
