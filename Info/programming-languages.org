@@ -40,6 +40,10 @@ are esoteric and rarely used.)
   - The [[https://cran.r-project.org/][Comprehensive R Archive Network]], with packages for nearly any
     statistical task you'd ever want. Also check out the [[https://cran.r-project.org/web/views/][task views]], detailed
     overviews of packages for specific subjects.
+  - [[http://swirlstats.com/][swirl]] provides interactive R tutorials from inside R, ranging from basic R
+    syntax to statistical data analysis methods.
+  - [[http://r4ds.had.co.nz/][R for Data Science]], by Garrett Grolemund and Hadley Wickham (online and in
+    print), an introduction to using R for statistics.
   - /The Art of R Programming/, by Norman Matloff, an introduction to R that
     quickly advances to high-level concepts.
   - /The Book of R/, by Tilman Davies, a more basic comprehensive introduction to
@@ -56,6 +60,7 @@ are esoteric and rarely used.)
   - [[https://www.python.org/][Python.org]]
   - The Python [[https://docs.python.org/3/][documentation]] is quite good, including the [[https://docs.python.org/3/tutorial/index.html][tutorial]] and the
     [[https://docs.python.org/3/library/index.html][library reference]].
+  - [[https://snakify.org/][Snakify]], a nifty online interactive tutorial for the very basics.
   - [[https://www.python.org/dev/peps/pep-0008/][PEP 8]] is the standard Python style guide, explaining the conventions for
     naming, formatting, and documentation.
   - [[https://jupyter.org/][Jupyter]], a project providing a web notebook interface to writing Python (and
