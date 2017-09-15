@@ -52,6 +52,9 @@ are esoteric and rarely used.)
     features of R.
   - [[https://www.johndcook.com/blog/r_language_for_programmers/][R Language for Programmers]], a quick review of some of R's features for those
     who already know another language.
+  - [[https://github.com/jimhester/lintr][lintr]] analyzes your R code for style issues and common mistakes. RStudio has
+    its diagnostics [[https://support.rstudio.com/hc/en-us/articles/205753617-Code-Diagnostics][built in as an option]], and other text editors can be
+    configured to use lintr too; see its documentation for details.
 
 * Python
 
