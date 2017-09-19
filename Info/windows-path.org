@@ -1,0 +1,77 @@
+#+TITLE: Setting your PATH on Windows
+#+AUTHOR: Alex Reinhart and Christopher Genovese
+#+DATE: 19 Sep 2017
+
+Those of you using Windows and Git Bash may have some trouble with common
+commands we'll be asking you to run. For example, many assignments ask you to
+make a script which can be run at the command line, using commands like
+
+#+BEGIN_SRC sh
+  Rscript analyze_data.R --some-options input_data.csv
+
+  python run_tests.py --all-tests
+#+END_SRC
+
+However, on Windows the shell may not know where the =Rscript= or =python= commands
+live, and so it will throw an error saying "command not found".
+
+Fortunately, we can teach it where to find these programs, to save you writing
+out the full path every time.
+
+First, we need to find where =Rscript.exe= lives. In Git Bash, run the command
+
+#+BEGIN_SRC sh
+  ls "/c/Program Files/R"
+#+END_SRC
+
+This should list a directory with a name like =R-3.4.1/=. Write this down
+somewhere -- you'll need to refer to it in a moment. (The numbers represent the
+version of R you have installed. If there are multiple directories listed, pick
+the one with the highest version number.)
+
+We'll tell Git Bash how to find R by editing a file called =.profile= in your home
+directory. In Git Bash, run the following commands:
+
+#+BEGIN_SRC sh
+  touch ~/.profile
+
+  notepad ~/.profile
+#+END_SRC
+
+This creates an empty text file called =.profile=, then opens Notepad to edit it.
+When you open Bash, it runs the commands in this special file before it does
+anything else, so we can use it to update the =PATH= variable that tells Bash
+where to look for to find commands.
+
+Referring back to the directory name you found a moment ago, write the following
+in the =.profile= in Notepad:
+
+#+BEGIN_SRC sh
+  export PATH="$PATH:/c/Program Files/R/R-3.4.1/bin"
+#+END_SRC
+
+Adjust the numbers to match the version of R you have installed, and be sure to
+include the =bin= at the end. Make sure everything else matches verbatim,
+including quotation marks and spacing.
+
+Save the file. Close Git Bash and open it again. Now when you run =Rscript=, you
+should see a message from the =Rscript= program itself, not an error saying
+"command not found".
+
+For those of you using Python, the process is similar, but the directory is
+different. Python is commonly installed in a folder like =C:/Python27=; find the
+directory which contains =python.exe= and write something like
+
+#+BEGIN_SRC sh
+  export PATH="$PATH:/c/Python27"
+#+END_SRC
+
+in your =.profile=.
+
+Let us know if you run into any problems during this process, or if it doesn't
+seem to work correctly. We may try to automate the process and provide a script
+you can run to get the =PATH= automatically.
+
+Note that if you upgrade R, it will be installed in a new directory matching the
+new version number, and you will need to edit the =.profile= to make the =PATH=
+match the new location.
