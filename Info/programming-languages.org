@@ -55,6 +55,9 @@ are esoteric and rarely used.)
   - [[https://github.com/jimhester/lintr][lintr]] analyzes your R code for style issues and common mistakes. RStudio has
     its diagnostics [[https://support.rstudio.com/hc/en-us/articles/205753617-Code-Diagnostics][built in as an option]], and other text editors can be
     configured to use lintr too; see its documentation for details.
+  - [[https://cran.r-project.org/package=roxygen2][roxygen2]] generates R documentation from specially formatted comments; the
+    comment format, which is a good style to use even if you're not using
+    roxygen2, is [[https://cran.r-project.org/web/packages/roxygen2/vignettes/rd.html][specified here]].
 
 * Python
 
