@@ -198,6 +198,50 @@
 
          # ts = bfs(...)
          # find_path(0, 3, ts.parent)
+
+         # Note: This captures the gist, but it fails if from_node is
+         # not start node for the bfs.
+
+         # To make this work for any from_node, notice that three
+         # things can happen in find_path() above: 1. the path from
+         # to_node ends at from_node giving a direct path; 2. the
+         # path from to_node and a similar path from from_node come
+         # to the same node that is different from either, in which
+         # case we get a path by joining the two (with one reversal);
+         # or 3. the paths from the two nodes lead to different
+         # nodes, in which case, to_node and from_node are in
+         # different connected components. The modified code
+         # looks as follows; notice how we refactored the operation
+         # into two pieces.
+
+         def find_bfs_root_path(node, parents):
+             """Find path from a node to the root of its BFS tree
+
+                node    -- a node identifier in a graph
+                parents -- an array specifying a BFS tree, with
+                           parents[nd] the parent of node nd
+                           in the tree or None if nd is the root.
+
+                Returns a list of nodes starting with the given node.
+             """
+             path = []
+             end = node
+             while end is not None:
+                 path.append(end)
+                 end = parents[end]
+             return path
+
+         def find_path(from_node, to_node, parents):
+             to_path = find_bfs_root_path(to_node, parents).reverse()
+
+             if to_path[0] == from_node:
+                 return path
+             else:
+                 from_path = find_bfs_root_path(from_node, parents)
+                 if to_path[0] == from_path[-1]:
+                     return from_path + to_path
+                 else:
+                     return None
        #+end_src
 
     3. Configure BFS to find the *connected components* of a graph,
@@ -258,10 +302,10 @@
 
              ts = None
 
-             for node in self.nodes():
+             for node in g.nodes():
                  if ts is None or ts.fresh(node):
                      g.update_node_properties(node, color=0)
-                     ts = self.bfs(node, True, on_edge=check_edge, ts=ts)
+                     ts = g.bfs(node, True, on_edge=check_edge, ts=ts)
 
                  if ts.finished:
                      break
@@ -421,6 +465,12 @@
 
     How would we change the DFS algorithm above for use with digraphs?
 
+    Answer: The algorithm itself does not change, but we can
+            no longer guarantee that the entire connected
+            component will be reached from any given source node.
+            See the discussion of Strongly Connected Components
+            below.
+
 *** DAGs and Topological Sort
 
     A *topological sort* of a DAG is a linear ordering of the DAG's nodes
@@ -442,6 +492,9 @@
     of a linked list (or equivalently onto a stack).
 
     Return the list of nodes.
+
+    (Note: We can also use the timestamps, specifically the
+     processed_times to get a valid sorting.)
     #+end_example
 
     Exercise: Code or Pseudo-Code this after-node function
@@ -450,20 +503,20 @@
 
     1. Configure =dfs= to count the number of "descendants" of a node.
     2. Configure =dfs= to compute a path between two nodes.
-       What kind of 
+       What kind of paths does DFS produce?
 
 *** Application: Directed Graphs and Strongly Connected Components
 
-    A directed graph is strongly connected if there is a /directed/ path
-    between any two nodes.
+    A directed graph is *weakly connected* if the corresponding
+    /undirected/ graph (replacing directed edges with undirected
+    edges) is connected.
+
+    A directed graph is *strongly connected* if for any two nodes
+    /v/ and /w/ there is a /directed/ path from /v/ to /w/ and from /w/ to /v/.
 
     The strongly connected components of a directed graph are its
-    maximal, strongly connected subgraphs.
-
-    We can find the strongly connected components with two DFS's.
-    For an arbitrary node /v/, the graph is strongly connected if
-    we can find a directed path from /v/ to any other node /u/ *and*
-    a directed path from any node /w/ to /v/.
+    maximal, strongly connected subgraphs. We can find the strongly
+    connected components with two DFS's.
 
     Let G be a directed graph and let G' have the same nodes
     and edges with all the edges /reversed/. Pick an arbitrary
@@ -484,9 +537,9 @@
     To find the strongly connected components, we
     just do a little processing.
 
-    In step 1, record the =processed_times=.
+    In step 1, record the =processed_time='s.
     In step 3, do =DFS_ALL(G')= with the nodes
-    ordered as the reversal of the =processing_times=.
+    ordered as the reversal of the =processed_time='s.
 
 ** Other Traversal Schemes
 
@@ -504,21 +557,16 @@
    The /same basic algorithm/ can be used with just minor
    modifications.
 
-   Question: What are some alternative priority schemes that
-   we can use in traversal?
-
-   +
-
-   *Group Exercise*: How would we change the BFS algorithm to
+   *Group Discussion*: How would we change the BFS algorithm to
    do a Priority First Traversal?
    
 * Minimum Spanning Tree (for Weighted Graphs)
   A /spanning tree/ of a connected, undirected graph G
   is a subgraph of G that is a /tree/ connecting every node.
-  (Note: A general undirected graph thus has spanning /forests/.)
+  (A general undirected graph thus has spanning /forests/.)
 
-  If the edges of G are weighted, then a /minimum spanning tree/ (MST)
-  is a spanning tree with minimal sum of edge weights.
+  If the edges of G are weighted, then a *minimum spanning tree (MST)*
+  is a spanning tree with minimal /sum/ of edge weights.
 
   In general, there can be more than one MST for a graph G,
   but under some conditions (e.g., distinct edge weights),
@@ -529,8 +577,55 @@
     1. Every connected graph has a spanning tree.  Why?
     2. Conceptually, how might we go about finding an MST?
 
-*** Algorithms: Prim and Kruskal
+*** Prim's Algorithm as Priority Queue Traversal
 
+    We build a tree from an arbitrary root by successively adding the
+    shortest edge leaving the tree.
+
+    We use a priority queue to efficiently find which edge
+    to add to the tree. Only nodes that are not in the tree
+    are contained in the priority queue. We build the tree
+    through a =parents= table, as in the traversal algorithms,
+    and we maintain a table =priority= that is the
+    minimum edge weight connecting each node (in the queue)
+    to the tree.
+
+    #+begin_example
+    Inputs: G     a (weighted, undirected) graph
+            root  a node in G
+    Output: A parents list specifying a minimum spanning tree
+            from root, with parents[w] = v if the edge from
+            v to w was added to tree.
+
+    # Initialize priority queue
+    Q = new priority queue        
+    foreach node n in G:
+        if node is root:
+            priority[node] = 0
+        else:
+            priority[node] = Infinity
+        parents[node] = nil
+        Q.add(node, priority[node])
+
+    # Build the tree
+    while Q is not empty:
+        closest = Q.extract_minimum()
+        foreach neighbor n of closest:
+            if n is in Q and G.weight(closest,n) < priority[n]:
+                parents[n] = closest
+                priority[n] = G.weight(closest,n)
+    #+end_example
+
+*** Classic Algorithms: Prim and Kruskal 
+    Prim's algorithm builds a tree one node at a time.
+    An alternative is Kruskal's algorithm which starts
+    with a forest containing each node, and merges trees
+    together. The classical implementations have a trade
+    off, making one better for sparse and one for dense
+    trees. A good priority queue implementation of Prim's
+    however, manages to be a good default algorithm in
+    both cases.
+    
     Prim's Algorithm:
     #+BEGIN_EXAMPLE
      Pick a node to be the root of the tree
@@ -550,8 +645,43 @@
       If the removed edge connects different trees in the forest:
         combine the trees
     #+END_EXAMPLE
+* Single-Source Shortest Paths
 
-*** Exercise: Pseudo-Code an MST Finder
+  Given a weighted, directed graph $G$ and a specific node
+  $s$, we want to find the shortest path from $s$ to each
+  other node in the graph. We do the same basic algorithm as
+  Prim's priority queue version for MST, except instead of a
+  tree, we maintain a path.
+
+  #+begin_example
+  Inputs: G       a (weighted, directed) graph
+          source  a node in G
+  Output: A list predecessor specifying the shortest paths
+          from source, with predecessor[w] = v if we added
+          an edge from v to w to the path.
+
+  # Initialize priority queue
+  Q = new priority queue        
+  foreach node n in G:
+      if node is source:
+          distance[node] = 0
+      else:
+          distance[node] = Infinity
+      predecessor[node] = nil
+      Q.add(node, distance[node])
+
+  # Build the path
+  while Q is not empty:
+      closest = Q.extract_minimum()
+      foreach neighbor n of closest:
+          if n is in Q:
+              est_dist = distance[closest] + G.weight(closest,n)
+              if est_dist < distance[n]:
+                  distance[n] = est_dist
+                  predecessor[n] = closest
+                  Q.decrease_priority(n, distance[n])
+  #+end_example
+
 * Appendix: Classifying Tree Edges
 *** The BFS Tree (forest)
 
