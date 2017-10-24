@@ -1,0 +1,170 @@
+#+TITLE: Some thoughts on the activities during Week 8 Thursday
+
+* Write a function which sums a list (or vector) of numbers.
+
+  #+begin_src R
+    sum <- function(numbers) {
+        Reduce(`+`, numbers, 0)
+    }
+  #+end_src
+
+  #+begin_src python
+    from functools import reduce
+
+    def sum(numbers):
+        return reduce(lambda x,y: x+y, numbers, 0)
+  #+end_src
+
+  #+begin_src clojure
+    (defn sum [numbers]
+      (reduce + 0 numbers))
+  #+end_src
+
+* Write a function that takes a list/vector of integers and returns a list
+  containing /only/ those elements for which the /preceding/ integer is negative.
+
+  The Clojure code here is especially interesting, two versions.
+
+  #+begin_src clojure
+    (defn follows-negative
+      "Keep only elements of collection that follow a negative number"
+      [coll]
+      (->> coll
+           (partition 2 1)
+           (filter (comp neg? first))
+           (map second)))                   ; use mapv rather than map to get vector
+
+    (follows-negative [1 -2 3 4 5 -7 10 -11 12 -9 100 0 0 0 -1 42]) ;=> [3 10 12 100 42]
+
+    ;; This version computes *no* intermediate sequences, looks almost the same
+    (defn follows-negative  
+      "Keep only elements of collection that follow a negative number"
+      [coll]
+      (let [xf (comp
+                (partition 2 1)             ; uses special partition
+                (filter (comp neg? first))
+                (map second))]
+        (into [] xf coll)))
+  #+end_src
+
+  #+begin_src R
+    follows_negative_reducer <- function(state, number) {
+        if ( !is.null(state$last) && state$last < 0 ) {
+            state$seq <- c(state$seq, number)  # can do this more efficiently
+        }
+        state$last <- number
+        return(state)
+    }
+
+    follows_negative <- function(vec) {
+        init_state <- list(seq=c(), last=NULL)
+        return(Reduce(follows_negative_reducer, vec, init_state)$seq)
+    }
+  #+end_src
+
+  #+begin_src python
+    from functools import reduce
+
+    def follows_negative_reducer(state, number):
+        if state['last'] is not None and state['last'] < 0:
+            state['seq'].append(number)
+        state['last'] = number
+        return state
+
+    def follows_negative(coll):
+        return reduce(follows_negative_reducer, coll, dict(seq=[], last=None))['seq']
+  #+end_src
+
+* Write a function that takes a string and returns true if all square =[ ]=,
+  round =( )=, and curly ={ }= delimiters are properly paired and legally nested,
+  or returns false otherwise. Other characters should be ignored.
+
+  For example, =[(a)]{[b]}= is legally nested, but ={a}([b)]= is not.
+
+  #+begin_src R
+    has_balanced_delimiters <- function(text, delimiters=list("("=")", "["="]", "{"="}")) {
+        closings <- sapply(delimiters,identity)
+
+        check <- function(stack, char) {
+                     if ( !identical(stack, c(FALSE)) ) { # cannot compare FALSE to empty seq
+                         if ( !is.null(delimiters[[char]]) ) {
+                             stack <- c(delimiters[[char]], stack)
+                         } else if ( length(stack) > 0 && char == stack[1] ) {
+                             stack <- stack[-1]
+                         } else if ( !is.na(match(char, closings)) ) {
+                             stack <- c(FALSE) # error, override remaining processing
+                         }
+                     }
+                     return(stack)
+                 }
+
+        final_stack <- Reduce(check, strsplit(text, "")[[1]], c())
+
+        if ( length(final_stack) > 0 ) {
+            return(FALSE)
+        } else {
+            return(TRUE)
+        }
+    }
+  #+end_src
+
+  #+begin_src python
+    from functools import reduce
+
+    def has_balanced_delimiters(text, delimiters={"{":"}", "[":"]", "(":")"}):
+        closings = set([v for k,v in delimiters.items()])
+        def check(stack, char):
+            if delimiters.get(char) in closings:
+                stack.append(delimiters[char])
+            elif len(stack) > 0 and char == stack[-1]:
+                stack.pop()
+            elif char in closings:
+                raise StopIteration("mismatched closing")
+            return stack
+
+        try:
+            final = reduce(check, list(text), [])
+        except StopIteration:
+            return False
+
+        if len(final) == 0:
+            return True
+        else:
+            return False
+
+    if __name__ == "__main__":
+        print(has_balanced_delimiters("{}([{}])"))
+        print(has_balanced_delimiters("{}([{}]"))
+        print(has_balanced_delimiters("{}([{})]"))
+
+  #+end_src
+
+  #+begin_src clojure
+    (defn has-balanced-delimiters?
+      "Does text have properly matched and balanced delimiters.
+
+         ,* text - a string  or character sequence.
+         ,* delimiters -- optional keyword argument, a map
+                         associating opening delimiters with their
+                         closing delimiter.
+
+       Returns true or false"
+      [text & {:keys [delimiters] :or {delimiters {\{ \} \[ \] \( \)}}}]
+      (let [closings (-> delimiters vals set)
+            check-char (fn [stack char]
+                         (if-let [closing (delimiters char)]
+                           (conj stack closing)
+                           (cond
+                             (and (not (empty? stack ))
+                                  (= char (first stack))) (rest stack)
+                             (contains? closings char)    (reduced false)
+                             :else                        stack)))
+            final (reduce check-char '() (seq text))]
+        (if (or (= false final) (not (empty? final))) false true)))
+
+    (comment
+      (has-balanced-delimiters? "{}([{}])")  ;=> true
+      (has-balanced-delimiters? "{}([{}]")   ;=> false
+      (has-balanced-delimiters? "{}([{})]")) ;=> false
+  #+end_src
+
