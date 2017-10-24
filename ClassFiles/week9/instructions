@@ -1,0 +1,30 @@
+For Mac and Linux users, open a terminal and type
+
+   ssh yourusername@pg.stat.cmu.edu
+
+You'll be asked for your password. Type it (the letters won't show up),
+then hit Enter and you should be logged in. If it asks "are you sure you
+want to continue connecting?", say yes.
+
+Windows users may be able to do this through git-bash. If not, you will
+need to download PuTTY, a SSH client for Windows. Download =PuTTY.exe=
+from here:
+
+   http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html
+
+PuTTY users can log in this through the graphical interface, connecting
+to pg.stat.cmu.edu and using your username and password; you should see
+a command line prompt once you successfully logged in.
+
+
+Mac users with homebrew installed might want to install postgresql locally
+instead. Do
+
+      brew install postgresql
+      pg_ctl -D /usr/local/var/postgres start
+      createdb NAME
+
+where NAME is your username (the word after /Users in your home
+directory path), for simplicity.
+
+ 
