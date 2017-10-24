@@ -1,12 +1,34 @@
-For Mac and Linux users, open a terminal and type
+1. For Mac and Linux users, open a terminal. Windows users can
+   start git-bash.
 
-   ssh yourusername@pg.stat.cmu.edu
+   Then type
+
+       ssh yourusername@cetus.stat.cmu.edu
+
+   password: hello123  (unless you already have an account and have changed your password,
+                        in which case use that.
 
 You'll be asked for your password. Type it (the letters won't show up),
 then hit Enter and you should be logged in. If it asks "are you sure you
 want to continue connecting?", say yes.
 
-Windows users may be able to do this through git-bash. If not, you will
+2. Once on type
+
+       psql
+
+   at the shell prompt. This should give you a new prompt (in the postgres repl)
+   that looks like 'username# '.
+
+   Type:
+   
+       \c USERNAME
+
+   replacing USERNAME with your username, to connect to your specific database.
+
+   Work in postgres. To quit psql, type \q at the prompt. 
+
+
+3. Windows users may be able to do this through git-bash. If not, you will
 need to download PuTTY, a SSH client for Windows. Download =PuTTY.exe=
 from here:
 
@@ -17,10 +39,11 @@ to pg.stat.cmu.edu and using your username and password; you should see
 a command line prompt once you successfully logged in.
 
 
-Mac users with homebrew installed might want to install postgresql locally
+4. Mac users with homebrew installed might want to install postgresql locally
 instead. Do
 
       brew install postgresql
+      initdb -D /usr/local/var/postgres
       pg_ctl -D /usr/local/var/postgres start
       createdb NAME
 
