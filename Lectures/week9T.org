@@ -4,6 +4,12 @@
 #+DATE:  24 Oct 2017
 #+AUTHOR: Christopher Genovese and Alex Reinhart 
 
+* Announcements
+  - Mid-semester grades
+  - Project submitted from your assignments repository,
+    add challenge-1 label
+  - Week 8 Thursday activities 1-3 code in documents/ClassFiles/week8
+  - Notes and code for today in documents
 * Where do you store your data?
 
   You have a data set that you want to use in your work.
@@ -94,7 +100,6 @@
 ** Thursday
    + Schema Design
    + Joins and Foreign Keys
-   + Advanced Queries and Transactinos
    + Using RDBs Programatically from Your Favorite Programming Language
   
 ** Appendix and Later
@@ -269,8 +274,10 @@
    #+begin_example
      brew install postgresql
      pg_ctl -D /usr/local/var/postgres start
-     createdb 
+     createdb NAME
    #+end_example
+   where NAME is your username (the word after /Users in your
+   home directory path).
 
 *** Getting Help   
     Type '\?' at the prompt to get a list of meta-commands
@@ -702,8 +709,7 @@
   a table of random data and playing with it.
 
   1. Create a table ~rdata~ with five columns: one =integer= column ~id~,
-     two =text= columns ~a~ and ~b~, one =date= ~moment~, and one =real= or
-     =double precision= column ~x~.
+     two =text= columns ~a~ and ~b~, one =date= ~moment~, and one =numeric= column ~x~.
 
   2. Use a =SELECT= command with the =generate_series= function to display
      the sequence from 1 to 100.
@@ -713,8 +719,9 @@
      text string.
 
   4. Use a =SELECT= command to choose a random element from a fixed array
-     of strings. A fixed text array can be obtained with =('{X,Y,Z}'::text[]),
-     used the =ceil= (ceiling) and =random= functions to make a selection.
+     of strings. A fixed text array can be obtained with =('{X,Y,Z}'::text[])=
+     and then indexed using the =ceil= (ceiling) and =random= functions to
+     make a selection.  (FYI, =('{X,Y,Z}'::text[])[1]= would give 'X'.)
      (SQL is 1-indexed.)
 
   5. =SELECT= a random date in 2017. You can do this by adding an integer
