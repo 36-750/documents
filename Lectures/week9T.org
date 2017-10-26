@@ -271,12 +271,15 @@
 
         psql
 
-     You should now see a prompt like 'username#'.
+     and hit Enter. You should now see a prompt like 'username#'.
    #+END_EXAMPLE
+
+   To exit the =psql= prompt, type =\q= and hit Enter. To exit the SSH session, use
+   the =exit= command.
 
    If you want Postgres on your own computer -- this is /optional/, since we'll be
    using sculptor for our assigments -- you can do so. Mac users with homebrew
-   can install postgres directly with
+   can install Postgres directly with
 
    #+begin_example
      brew install postgresql
