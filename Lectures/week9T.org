@@ -253,29 +253,37 @@
 * Introducing SQL and Postgres
 ** Getting Started
 
-   Connect to the stat postgres server =pg.stat.cmu.edu=,
+   Connect to the stat postgres server =sculptor.stat.cmu.edu=,
    as shown on the handout.
+
    #+BEGIN_EXAMPLE
      In a terminal (or using git-bash or putty on Windows), type
 
-        ssh pg.stat.cmu.edu
+        ssh yourusername@sculptor.stat.cmu.edu
 
-     and log in with your username and password.
+     and log in with your password, given in the email you received
+     from Carl Skipper.
+
+     You'll see a scary message about "The authenticity of host...
+     can't be established." Type "yes" and hit Enter to continue.
+
      Then, at the prompt, type
 
         psql
 
-     and enter your (database) password.   
-
      You should now see a prompt like 'username#'.
    #+END_EXAMPLE
-   Mac users with homebrew, might just want to install
-   postgres directly with
+
+   If you want Postgres on your own computer -- this is /optional/, since we'll be
+   using sculptor for our assigments -- you can do so. Mac users with homebrew
+   can install postgres directly with
+
    #+begin_example
      brew install postgresql
      pg_ctl -D /usr/local/var/postgres start
      createdb NAME
    #+end_example
+
    where NAME is your username (the word after /Users in your
    home directory path).
 
