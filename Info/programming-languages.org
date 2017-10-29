@@ -69,6 +69,9 @@ are esoteric and rarely used.)
   - [[https://snakify.org/][Snakify]], a nifty online interactive tutorial for the very basics.
   - [[https://www.python.org/dev/peps/pep-0008/][PEP 8]] is the standard Python style guide, explaining the conventions for
     naming and formatting; [[https://www.python.org/dev/peps/pep-0257/][PEP 257]] describes documentation conventions.
+  - [[http://docs.python-guide.org/en/latest/writing/gotchas/][Common Gotchas]] explains some common mistakes made by new Python programmers.
+    The same site also has a [[http://docs.python-guide.org/en/latest/intro/learning/][list of references for learning Python]] and some
+    [[http://docs.python-guide.org/en/latest/writing/style/][advice on style]].
   - [[https://jupyter.org/][Jupyter]], a project providing a web notebook interface to writing Python (and
     other) code.
   - [[http://www.numpy.org/][NumPy]], a library for /n/-dimensional arrays and matrices, plus linear algebra
