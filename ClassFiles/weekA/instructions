@@ -1,0 +1,47 @@
+1. For Mac and Linux users, open a terminal. Windows users can
+   start git-bash.
+
+2. Log into the new department database server, sculptor.stat.cmu.edu,
+   via ssh using the username and password Carl sent you in email.
+
+     ssh yourusername@sculptor.stat.cmu.edu
+
+   You'll be asked for your password. Type it (the letters won't show
+   up), then hit Enter and you should be logged in. If it asks "are
+   you sure you want to continue connecting?", say yes. (You should
+   probably change your password by tying 'passwd' at the shell
+   prompt and entering a new password.)
+
+3. At the shell prompt, type
+
+     psql
+
+   which will start an interactive postgresql REPL.
+   You should now see a prompt like 'yourusername# '.
+
+4. Work in postgres. To quit psql, type \q at the prompt. 
+
+
+5. Mac users with homebrew installed might want to install postgresql
+   locally instead. At the shell prompt, do
+
+     brew install postgresql
+     initdb -D /usr/local/var/postgres
+     pg_ctl -D /usr/local/var/postgres start
+     createdb NAME
+
+   where NAME is your username (the word after /Users in your home
+   directory path), for simplicity.
+
+
+6. Windows users may be able to do this through git-bash. If not, you will
+   need to download PuTTY, a SSH client for Windows. Download =PuTTY.exe=
+   from here:
+    
+      http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html
+    
+   PuTTY users can log in this through the graphical interface, connecting
+   to pg.stat.cmu.edu and using your username and password; you should see
+   a command line prompt once you successfully logged in.
+
+
