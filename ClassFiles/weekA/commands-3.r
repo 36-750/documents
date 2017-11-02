@@ -1,7 +1,7 @@
 library(RPostgreSQL)
 
 con <- dbConnect(PostgreSQL(), user="yourusername", password="yourpassword",
-                 dbname="yourusername", host="pg.stat.cmu.edu")
+                 dbname="yourusername", host="sculptor.stat.cmu.edu")
 
 result <- dbSendQuery(con, "SELECT persona, score FROM events WHERE ...")
 

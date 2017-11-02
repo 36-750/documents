@@ -1,6 +1,6 @@
 import psycopg2
 
-conn = psycopg2.connect(host="pg.stat.cmu.edu", database="yourusername",
+conn = psycopg2.connect(host="sculptor.stat.cmu.edu", database="yourusername",
                         user="yourusername", password="yourpassword")
 
 cur = conn.cursor()
