@@ -1,0 +1,68 @@
+* Debugging
+
+  We've all done a lot of print-based debugging: if the code doesn't work, stick
+  a =print= statement in the middle to see what it's doing.
+
+  This is a blunt tool, though a very easy one to use. For tricky cases, look to
+  an interactive debugger before sticking in a few dozen print statements.
+  Debugging is hard without the right tools:
+
+  "Debugging is twice as hard as writing the code in the first place. Therefore,
+  if you write the code as cleverly as possible, you are, by definition, not
+  smart enough to debug it." -- Brian Kernighan
+
+** Using your tests
+
+   A good first debugging step is to make sure you have tests for the function
+   you're debugging.
+
+   You're going to be trying all sorts of changes, tinkering with things,
+   refactoring, and generally messing with the function -- if you have tests,
+   you can easily check if you fixed the bug without introducing any new
+   ones. If you don't, you have to laboriously try various inputs until you're
+   satisfied.
+
+   Tests also ensure that you /actually know what the function is supposed to
+   do./
+
+** Interactive debuggers
+
+   An interactive debugger halts program execution and allows you to inspect the
+   current state: display local variables, view the call stack, set breakpoints,
+   and even run new code. You can step through the code line-by-line to examine
+   how it works.
+
+   Debuggers can often be configured to open automatically when your program
+   crashes or throws an exception (like Python's =pdb=). IDEs also let you set
+   breakpoints and run debuggers whenever you'd like, or you can add code to
+   invoke the debugger when desired.
+
+   (RStudio example time)
+
+   Debuggers also typically have command-line interfaces that let you
+   interactively type commands and explore the program's state. (Common Lisp and
+   Smalltalk even let you change the code from inside the debugger, editing as
+   you work.)
+
+   An example:
+
+   #+BEGIN_SRC sh
+     # Instead of
+     python ingest_crimes.py -s 2707.1 data/example_data.txt
+     # Run
+     python -m pdb ingest_crimes.py -s 2707.1 data/example_data.txt
+   #+END_SRC
+
+   Some unit testing tools (like Python's [[https://docs.pytest.org/en/latest/][pytest]]) can automatically open a
+   debugger when a test fails.
+
+   Some debuggers support /remote/ debugging: they can debug a program running
+   on another machine, like a phone or a server.
+
+* Resources
+
+  - [[https://docs.python.org/2/library/pdb.html][pdb]], the Python debugger. If you use IPython, look at the [[https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-debug][%debug magic
+    command]].
+  - [[https://support.rstudio.com/hc/en-us/articles/205612627-Debugging-with-RStudio][RStudio's debugging documentation]]
+  - [[https://www.gnu.org/software/gdb/][gdb]] and [[http://lldb.llvm.org/][lldb]] for compiled languages (C, C++, Objective-C, whatever GCC or
+    LLVM support)
