@@ -35,9 +35,9 @@ solve_sudoku <- function(grid, next_cell, order_choices) {
     ## INSERT CODE HERE ##
     ## Pick a cell and try to assign values to it.
     ##
-    ## See assign() and eliminate() definitions below to see how to use them.
-    ## You also have a most_constrained(grid) function, which takes a grid as an
-    ## argument and returns the coordinates of the most constrained cell, and a
+    ## See the assign() definition below to see how to use it. You also have a
+    ## most_constrained(grid) function, which takes a grid as an argument and
+    ## returns the coordinates of the most constrained cell, and a
     ## smallest_first(grid, cell) function which returns the possible values for
     ## that grid cell, ordered from smallest to largest. These can be used as
     ## `next_cell` and `order_choices` arguments.
