@@ -1,0 +1,444 @@
+* Why so slow?
+
+  Standard R and Python advice -- or any other dynamic language, like Ruby or
+  PHP -- is to write performance-critical code in C or C++. Use built-in
+  vectorized functions, write hot loops in Rcpp or Cython, and rely on external
+  libraries as much as possible.
+
+  But why should R and Python be so much slower than C?
+
+  [[../Figures/which-programs-are-fastest-firstlast.png]]
+
+  [[../Figures/which-programs-are-fastest-middle.png]]
+
+  Let's take a meandering tour through CPU architecture, programming language
+  design, interpreters, and compilers, so we can see where these performance
+  differences come from.
+
+* A bit of CPU architecture
+
+  CPUs execute /instructions/. Each instruction is very low-level: add these
+  numbers, move this to memory, jump to these other instructions in memory, load
+  a number from memory, etc.
+
+  Everything that runs on your computer is eventually turned into these
+  instructions. They can be written in textual form as /assembly language/:
+
+  #+BEGIN_SRC asm
+    pushq   %rbp
+    movq    %rsp, %rbp
+    addq    %rsi, %rdi
+    movq    %rdi, %rax
+    popq    %rbp
+    ret
+  #+END_SRC
+
+  This is the code for a function adding two integers. We push the function
+  pointer onto the stack, shuffle some values around, add two values, pop off
+  the stack, and return.
+
+  The names (=%rbp=, =%rax=, etc.) refer to /registers/: cells of fast memory inside
+  the processor. Registers are blazing fast, but each can only hold small values
+  (usually 64 bits), and there are a limited number. Every instruction works on
+  values in registers, so other instructions have to load registers from main
+  memory, store their values back to memory, etc.
+
+  Compilers work hard to allocate registers, since you usually have way more
+  variables than registers. Running out of registers and having to move stuff in
+  and out of RAM ("spilling") is inefficient.
+
+** Cache
+
+   Besides registers, processors have caches. These are in a hierarchy of L1,
+   L2, L3, etc. caches, in decreasing order of speed. Caches are usually a few
+   megabytes of extremely fast RAM situated directly on the processor, so they
+   can be accessed at high speed.
+
+   The processor automatically manages the cache. You can't directly manipulate
+   it with your code. The cache contains copies of frequently used chunks of
+   memory, automatically discarding the least recently used chunks to make space
+   for new ones. When your program uses a certain memory location, an entire
+   chunk of memory containing that location is copied into the cache.
+
+   If you're lucky, your data fits in the cache and operations will be extremely
+   fast. If you're unlucky, or your program accesses a great deal of data spread
+   widely over memory, the processor will have to wait ("stall") to retrieve
+   data from RAM.
+
+   This is why it can be faster to iterate over a matrix in the right order. In
+   R, matrices are stored in column-major order: the matrix
+
+   #+BEGIN_EXAMPLE
+     1 2 3
+     4 5 6
+   #+END_EXAMPLE
+
+   is actually stored in memory as =1 4 2 5 3 6=. If we iterate over the whole
+   matrix, one column at a time, contiguous chunks of the matrix can be loaded
+   into the cache. But if we iterate over rows, we keep skipping from one memory
+   location to one far away, and new chunks have to be brought in from main
+   memory, making the loop much slower.
+
+   (Numpy for Python stores arrays in row-major order by default, so the
+   opposite is true there.)
+
+* Interpreters, ASTs, JITs, VMs, and more
+
+  Interpreted languages like R and Python are not translated into machine code
+  -- there is no compiler that turns R into assembly code. Instead, they run
+  with the help of an /interpreter/.
+
+** But why not compile?
+
+   Operations in a high-level language don't directly correspond to machine
+   instructions. Consider:
+
+   #+BEGIN_SRC r
+     add <- function(x, y) { x + y }
+   #+END_SRC
+
+   An innocuous function. But:
+
+   - =x= and =y= might be numbers, which can be added by the processors.
+
+   - =x= and =y= might be vectors, which have to be added elementwise. One might be
+     shorter than the other, which has to be checked and handled. We'll have to
+     allocate a vector to store the result.
+
+   - =x= and =y= may be S4 classes with a special + method defined for them (like
+     the hyperreal numbers I showed in class). We may need to allocate memory
+     for the results, tracking this memory with the garbage collector.
+
+   - =x= and =y= may be objects for which addition is not defined.
+
+   *None of this is known until the program runs.*  When R sees "+", it has to
+   check which of these is true, and potentially do some very complex processing
+   (like for S4 classes). Running + means loading =x= and =y=, checking their types,
+   determining which operation is appropriate, and then invoking the relevant
+   code.
+
+   We could turn this into machine code -- very long, very tedious machine code
+   -- but there's no point. Instead, we write a program which reads the code and
+   executes it. The program is, in effect, pretending to be a computer processor
+   that understands R.
+
+** Simple interpreters
+
+   Interpreting starts by turning the source code into a /parse tree/ or
+   /abstract syntax tree/ (AST), data structures representing the meaning of the
+   code. Here's the AST for our =add= function, as printed by the =pryr= package:
+
+   #+BEGIN_EXAMPLE
+     > ast(function(x, y) { x + y } )
+     \- ()
+       \- `function
+       \- []
+         \ x =`MISSING
+         \ y =`MISSING
+       \- ()
+         \- `{
+         \- ()
+           \- `+
+           \- `x
+           \- `y
+       \- <srcref>
+   #+END_EXAMPLE
+
+   This is just a textual representation. The built-in =quote= function returns
+   this representation as an R list: you can process the list to retrieve the
+   function calls, arguments, and so on:
+
+   #+BEGIN_EXAMPLE
+     > foo <- quote(function(x, y) { x + y } )
+     > foo[[1]]
+     `function`
+     > foo[[2]]
+     $x
+
+     $y
+
+     > foo[[3]][[1]]
+     `{`
+   #+END_EXAMPLE
+
+   The simplest possible interpreters simply read in the AST and operate on
+   it. These are known as /AST walkers/.
+
+   AST walking is dead simple: read in the code piece by piece and do what it
+   says. If it references a variable, look up the variable in a table and find
+   its value; if it has a mathematical expression, fill out the values and
+   calculate it. You could write R code that interprets R code by taking the
+   output of =quote= and reading through it, element by element.
+
+   AST walking is also usually slow. Everything is referred to by name
+   (variables, functions, objects, etc.), so everything has to be looked up in a
+   set of tables (to determine what's in scope) every time it's accessed.
+   There's a lot of overhead. The processor's cache is filled with AST data,
+   variable scope tables, garbage collector data, and other stuff that's not
+   your code or your data.
+
+*** Aside: Functions that transform code
+
+    Hang on -- if you can turn R code into an AST, and then read and even modify
+    that AST, can you write functions that take /code/ and return /new code/?
+
+    Yes.
+
+    This is a bit painful in R, since we have to work with deeply nested lists,
+    but it's entirely possible. Imagine a function like this:
+
+    #+BEGIN_SRC R
+      ## Recurse deeply into an AST object, applying the provided function
+      ## to elements that are numerics
+      replace_numeric <- function(ast, fn) {
+          if (is.name(ast) || is.pairlist(ast) || inherits(ast, "srcref")) {
+              return(ast)
+          } else if (is.call(ast)) {
+              replaced <- sapply(as.list(ast),
+                                 function(el) { replace_numeric(el, fn) })
+              return(as.call(replaced))
+          } else if (is.numeric(ast)) {
+              return(fn(ast))
+          } else {
+              return(ast)
+          }
+      }
+
+      randomize_constants <- function(const) {
+          const + rnorm(1)
+      }
+
+      foo <- quote(function(x) { x + 4 })
+
+      bar <- replace_numeric(foo, randomize_constants)
+
+      bar
+      ## function(x) {
+      ##    x + 3.64477015719487
+      ##}
+    #+END_SRC
+
+    Now, =foo= and =bar= are both AST objects, not functions, but we can evaluate
+    these trees and turn them back into functions with =eval=:
+
+    #+BEGIN_SRC R
+      foo_fn <- eval(foo)
+      bar_fn <- eval(bar)
+
+      foo_fn(4)  #=> 8
+      bar_fn(4)  #=> 7.64477
+    #+END_SRC
+
+    Why might it be useful to rewrite code like this? In R, it's not usually a
+    good idea. Changing how the language works can be confusing. It's tough to
+    write a good code-mangling function -- you have to handle the AST properly.
+
+    But in other languages, functions that modify code are common -- even part
+    of the core language. Consider Lisp and its derivatives (Scheme, Clojure,
+    Racket, etc.). You've seen some examples where code is written in a weird
+    notation with lots of parentheses:
+
+    #+BEGIN_SRC scheme
+      (/ (+ (- b) (sqrt (- (expt b 2) (* 4 a c))))
+         (* 2 a))
+    #+END_SRC
+
+    But this notation reveals an elegant advantage. The notation for a list -- a
+    linked list of elements -- is just
+
+    #+BEGIN_SRC scheme
+      '(1 2 3 4 5 6)
+    #+END_SRC
+
+    The ' at the front is the =quote= operator -- sound familiar? =quote= tells Lisp
+    that this is a bare list. If there is no quote, as in
+
+    #+BEGIN_SRC scheme
+      (* 2 a)
+    #+END_SRC
+
+    Lisp takes the list, assumes the first element is a function, and applies it
+    to with the remaining elements as arguments. So we can write
+
+    #+BEGIN_SRC scheme
+      '(/ (+ (- b) (sqrt (- (expt b 2) (* 4 a c))))
+          (* 2 a))
+    #+END_SRC
+
+    with the quote, and this returns a /list/ representing the code. Just like
+    code can operate on lists, it can operate on code, returning new lists that
+    are also code.
+
+    Users of Scheme and Lisp-like languages often write /macros/, which take their
+    arguments as lists of code and return new code, to do useful things, letting
+    them essentially build their own programming language. When could this be
+    useful? Imagine doing some operation on every row of results from an SQL
+    query:
+
+    #+BEGIN_SRC lisp
+      (doquery (:select 'x 'y :from 'some-imaginary-table) (x y)
+        (format t "On this row, x = ~A and y = ~A.~%" x y))
+    #+END_SRC
+
+    Here =doquery= is a macro which takes a query, names the resulting columns,
+    and executes a piece of code once for every row, using the values from each
+    column. When the code is /read/ -- not when it runs -- the =doquery= macro runs
+    and transforms this code into the full code needed to convert this to an SQL
+    query, send it to the database, and do the loop over the results.
+
+    (This example is from [[http://marijnhaverbeke.nl/postmodern/][Postmodern]], a PostgreSQL package for Common Lisp.)
+
+    The key lesson: /code is data/. Interpreters and compilers are just programs
+    that work on code as their data.
+
+** Bytecode and virtual machines
+
+   Before compiling, the next-best option is to produce /bytecode/, which is
+   almost, but not quite, entirely unlike assembly language. Bytecode is a set
+   of instructions for a /virtual machine/ -- a hypothetical CPU. Instead of
+   having the typical operations your CPU provides, this hypothetical CPU has
+   instructions that do the types of things your programming language needs. For
+   example, here's some Python bytecode for a function called =min(x, y)=:
+
+   #+BEGIN_EXAMPLE
+       2           0 LOAD_FAST                0 (x)
+                   3 LOAD_FAST                1 (y)
+                   6 COMPARE_OP               0 (<)
+                   9 POP_JUMP_IF_FALSE       16
+
+       3          12 LOAD_FAST                0 (x)
+                  15 RETURN_VALUE
+
+       5     >>   16 LOAD_FAST                1 (y)
+                  19 RETURN_VALUE
+                  20 LOAD_CONST               0 (None)
+                  23 RETURN_VALUE
+   #+END_EXAMPLE
+
+   Python's hypothetical processor is a /stack machine/: each instruction takes
+   arguments off the stack and pushes results onto the stack. The two =LOAD_FAST=
+   instructions push the arguments onto the stack, and =COMPARE_OP= compares them
+   and pushes True or False onto the stack, and so on.
+
+   Instead of parsing the code into an AST and stopping, the AST has to be
+   converted into bytecode. Notice the bytecode doesn't reference variables by
+   name, so variable accesses and lookups are faster. (This is why global
+   variables are slow in languages like Python: function arguments are known
+   when the function is parsed, so they can be pushed on the stack easily, but
+   globals are only know when the function runs, so the interpreter has to look
+   them up in a table every time.)
+
+   Stack machines are easy to write but require shuffling data around on the
+   stack, which may require extra instructions and overhead. Consider a simple
+   Scheme function in the Guile interpreter:
+
+   #+BEGIN_SRC scheme
+     (lambda (x y)
+       (let ((z (+ x y)))
+         (* z z)))
+   #+END_SRC
+
+   In bytecode, it is:
+
+   #+BEGIN_EXAMPLE
+     > ,disassemble (lambda (x y)
+                      (let ((z (+ x y)))
+                        (* z z)))
+
+        0    (assert-nargs-ee/locals 10)     ;; 2 args, 1 local
+        2    (local-ref 0)                   ;; `x'
+        4    (local-ref 1)                   ;; `y'
+        6    (add)
+        7    (local-set 2)                   ;; `z'
+        9    (local-ref 2)                   ;; `z'
+       11    (local-ref 2)                   ;; `z'
+       13    (mul)
+       14    (return)
+   #+END_EXAMPLE
+
+   We push the two arguments onto the stack, add them, name the result, push it
+   onto the stack twice, multiply, and then return the result. This is
+   inefficient -- only two of the instructions are actual math.
+
+   Other languages, like Lua (and more recent Guile versions), use a
+   register-based VM with named locations for storing data, more like actual
+   processors use.
+
+   Lots of languages run on bytecode: Python, Java, PHP, Lua, C#, and many
+   others.
+
+   R gained a bytecode compiler several years ago, and base R functions are
+   bytecode-compiled. This gives a modest speed benefit over the default AST
+   walker.
+
+** Optimizers
+
+   Because bytecode is intended to be a simple set of core instructions, it's
+   easier to optimize. The interpreter can pattern-match certain sets of
+   bytecode and replace them with more efficient constructions. This is known as
+   /peephole optimization/, because the optimizer only looks at a few
+   instructions at a time.
+
+   Bytecode optimization can be combined with other types of optimization which
+   use knowledge of the AST and the control flow in the program:
+
+   - Constant folding :: Constant expressions (like =1/sqrt(2 * pi)=) can be
+        recognized and evaluated in advance, instead of evaluated every time the
+        code runs.
+   - Loop invariant code motion :: Expressions inside a loop which do not change
+        from one iteration to the next are pulled out, so they are only
+        calculated once.
+   - Constant subexpression elimination :: If the same expression appears
+        multiple times, it can be calculated once and stored to a temporary
+        variable.
+   - Dead code elimination :: Calculations whose results are not used can be
+        skipped entirely.
+
+   There are many others. Sophisticated compilers do dozens of separate
+   optimization passes; bytecode interpreters like Python are usually much less
+   sophisticated, since fancy optimization delays execution. LLVM, a framework
+   for building compilers, has an industrial-strength optimization system, as
+   does GCC.
+
+** Just-in-time compilation
+
+   It's hard to produce efficient machine code for an interpreted language
+   because any variable could have any type -- a number, a list, an object with
+   overloaded operators, whatever. Many types of optimization aren't feasible.
+
+   But sometimes the interpreter can deduce the possible types. It might observe
+   the program running and see what types are common, or use /type inference/
+   using the code it can see. What then?
+
+   In /just-in-time compilation/, the interpreter recognizes when the types of
+   variables are known and generates specialized machine code for them. JITed
+   languages include Java, C#, JavaScript, Julia, and even Python with the [[http://pypy.org/][PyPy]]
+   system.
+
+   This compilation adds overhead: the interpreter does extra work recognizing
+   when code can be JIT compiled, but saves time interpreting that code.
+
+* Compiling to machine code
+
+  C, C++, Common Lisp, Go, Haskell, OCaml and many others can be compiled
+  directly to machine code instead of run by an interpreter.
+
+  Ahead-of-time (AOT) compilation changes the tradeoffs. An AOT compiler can
+  spend massive amounts of time optimizing code, since the optimization only
+  happens once. A JIT compiler needs to work as fast as possible so the program
+  isn't slowed down by compilation. An AOT compiler can analyze the entire
+  program at once, inferring data types and properties to make better
+  optimization decisions. AOT compilers can even use /profile-guided
+  optimization/ (PGO), which involves running the program and observing its
+  behavior to make better optimization decisions.
+
+* Resources
+
+  - [[http://norvig.com/lispy.html][(How to Write a (Lisp) Interpreter (in Python))]], Peter Norvig's tutorial on
+    writing a simple parser and interpreter in Python.
+  - [[https://en.wikibooks.org/wiki/Write_Yourself_a_Scheme_in_48_Hours][Write Yourself a Scheme in 48 Hours]], a more intense introduction to using
+    Haskell to interpret Scheme.
+  - [[https://jakevdp.github.io/blog/2014/05/09/why-python-is-slow/][Why Python is Slow]]
+  - Andy Wingo's blog post [[https://wingolog.org/archives/2013/11/26/a-register-vm-for-guile][A Register VM for Guile]], explaining the internal
+    details of one kind of VM.
+  - [[http://www.extremetech.com/extreme/188776-how-l1-and-l2-cpu-caches-work-and-why-theyre-an-essential-part-of-modern-chips][How L1 and L2 CPU caches work, and why they’re an essential part of modern chips]]
