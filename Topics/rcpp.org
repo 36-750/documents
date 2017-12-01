@@ -1,0 +1,373 @@
+* Rcpp Basics
+** Wrapping
+
+   + =evalCpp()=     :: evaluate short C++ code snippets, given as string
+   + =cppFunction()= :: defines an R function from a C++ function given as a string
+   + =sourceCpp()=   :: compiles and links a C++ source file and exports tagged
+                      functions into R
+
+   Example:
+
+   #+BEGIN_SRC R
+    f <- cppFunction('double weightedMean(NumericVector x, NumericVector w) {
+      int n = x.size();
+      double numerator = 0.0;
+      double denominator = 0.0;
+      for ( int i = 0 ; i < n ; ++i ) {
+          numerator += x[i] * w[i];
+          denominator += w[i];
+      }
+      // No error checking or assertions in this example, see below
+      return numerator/denominator;
+    }')
+    f(1:4, rep(1,4)  # => 2.5
+   #+END_SRC
+
+   Note the structure of the =for= loop:
+
+   #+BEGIN_SRC C++
+      for ( initializers; condition; updater ) { BODY }
+   #+END_SRC
+
+   where the initializer can contain declaration of variables
+   that are then *only visible* inside the loop.
+
+   For error checking we might include:
+
+   #+BEGIN_SRC C++
+     try {
+         if ( is_true(any(w < 0.0)) || denominator <= 0.0 ) {
+             throw std::domain_error("Invalid weights");
+         }
+         return numerator/denominator;
+     } catch(std::exception &ex) {
+         forward_exception_to_r(ex);
+     } catch(...) {
+         ::Rf_error("c++ exception (unknown reason)");
+     }
+   #+END_SRC
+
+   =sourceCpp()= reads its input from a file and creates a shared, dynamically
+   linked library. (It can really also take a string with the =code= argument,
+   which is how the other two work.)
+
+   #+BEGIN_SRC C++
+   // File slow-fib.cpp
+   #include <Rcpp.h>
+
+   using namespace Rcpp;
+
+   // [[Rcpp::export]]
+   int fibonacci(const int x) {
+       if (x == 0) return(0);
+       if (x == 1) return(1);
+       return fibonacci(x - 1) + fibonacci(x - 2);
+   }
+   #+END_SRC
+
+   Note the export comment tag (the space matters),
+   which marks the function for export to R.
+
+   #+BEGIN_SRC R
+       sourceCpp("slow-fib.cpp")
+       fibonacci(10) # => 55
+   #+END_SRC
+
+** C++ Features
+
+   Unlike R, C++ is a compiled, statically typed language.
+
+   Each variable must be given a specific type, and each function must be
+   declared with the types of its arguments and of its return value.
+
+   Static typing lets the compiler optimize effectively, but it puts more
+   constraints on the developer.
+
+   C++ is a large, complex language with many features.
+   A few things are worth remembering:
+
+     + Standard C is also legal C++.
+     + Syntax has similarities with R, but (non-compound) statements must all be
+       terminated with a =;=.
+     + C++ (like C) is zero-indexed, not one-indexed like R. Beware.
+     + There is no =<-= operator: use = for assignment.
+     + Scalars and vectors (or other aggregate types) are
+       not interchangeable (though a spoonful of Sugar helps).
+     + Functions must explicitly =return= their value.
+     + You can use C libraries and functions directly (note: externs).
+     + The Standard Template Library (or STL) exposes a wide variety of rich and
+       well-tested data structures and algorithms.
+     + The Boost library is a powerful third-party library that goes above and
+       beyond the STL.
+     + C++ has evolved, modern versions: C++11 and C++14 offer many nice new
+       features. You may have to configure specially to use those features with
+       Rcpp.
+
+** Scalar Types
+
+   The common "scalar" types are bool, int, double, and String.
+   (All but the last of these are C++ primitive types.)
+
+   #+BEGIN_SRC C++
+     double trim(double x, double threshold) {
+         if ( x > threshold ) {
+             return threshold;
+         } else if ( x < -threshold ) {
+             return -threshold;
+         } else {
+             return x;
+         }
+     }
+   #+END_SRC
+
+   Exercise: Write a function =signum()= that takes an
+   integer and returns -1, 0, or 1 if that integer
+   is negative, zero, or positive.
+
+   #+BEGIN_SRC C++
+     int signum(int x) {
+       if (x > 0) {
+         return 1;
+       }
+       if (x == 0) {
+         return 0;
+       }
+       return -1;
+     }
+   #+END_SRC
+
+** Vector Types
+
+   Rcpp defines several classes to handle R vectors.
+   These have a nice range of methods and work well
+   with "sugar" as we'll see below.
+
+   NumericVector, IntegerVector, CharacterVector, LogicalVector
+
+   For instance, you use the =.size()= method to get the
+   length of the vector, as illustrated above.
+
+   Several ways to create vectors:
+
+   #+BEGIN_SRC C++
+     SEXP x;
+     std::vector<double> y(10);
+
+     NumericVector xx(x);       // create from a SEXP
+     NumericVector xx(10);      // of a given size (filled with 0)
+     NumericVector xx(10, 2.0); // ... with a default for all values
+     NumericVector xx( y.begin(), y.end() ); // range constructor
+
+     // using create
+     NumericVector xx = NumericVector::create(
+         1.0, 2.0, 3.0, 4.0 );
+     // with names attribute
+     NumericVector yy = NumericVector::create(
+         Named["foo"] = 1.0,
+         _["bar"] = 2.0 ); // short for Named
+   #+END_SRC
+
+   Extracting and assigning values:
+
+   #+BEGIN_SRC C++
+     double u = xx[0];
+     double v = xx(1);
+     double z = yy["foo"] + yy["bar"];
+
+     xx[0] = 1.618;
+     xx(1) = -1.0;
+     yy["foo"] = 10.0;
+
+     yy["foobar"] = 1;  // grow the vector
+   #+END_SRC
+
+   These vectors support some nice R-like operations:
+
+   #+BEGIN_SRC C++
+     // [[Rcpp::export]]
+     NumericVector positives(NumericVector x) {
+         return x[x > 0];
+     }
+
+     // [[Rcpp::export]]
+     NumericVector in_range(NumericVector x, double low, double high) {
+         return x[x > low & x < high];
+     }
+
+     // [[Rcpp::export]]
+     NumericVector no_na(NumericVector x) {
+         return x[ !is_na(x) ];
+     }
+
+     // [[Rcpp::export]]
+     List first_three(List x) {
+         IntegerVector idx = IntegerVector::create(0, 1, 2);
+         return x[idx];
+     }
+
+     // [[Rcpp::export]]
+     List with_names(List x, CharacterVector y) {
+         return x[y];
+     }
+   #+END_SRC
+
+   Returning new vectors
+
+   #+BEGIN_SRC R
+     pdistR <- function(x, ys) {
+       sqrt((x - ys)^ 2)
+     }
+   #+END_SRC
+
+   #+BEGIN_SRC C++
+     NumericVector pdistCpp(double x, NumericVector ys) {
+       int n = ys.size();
+       NumericVector out(n);  // <- note constructor
+
+       for(int i = 0; i < n; ++i) {
+         out[i] = sqrt(pow(ys[i] - x, 2.0));
+       }
+       return out;
+     }
+   #+END_SRC
+
+** Matrix Types
+
+   Rcpp supplies various matrix types as well:
+   NumericMatrix, IntegerMatrix, CharacterMatrix, LogicalMatrix
+
+   + Use =.nrow()= and =.ncol()= methods to get dimensions
+   + Use =()= not =[]= for indexing
+
+   #+BEGIN_SRC C++
+     NumericVector rowSumsCpp(NumericMatrix x) {
+       int nrow = x.nrow();
+       int ncol = x.ncol();
+       NumericVector out(nrow);
+
+       for (int i = 0; i < nrow; i++) {
+         double total = 0;
+         for (int j = 0; j < ncol; j++) {
+           total += x(i, j);
+         }
+         out[i] = total;
+       }
+       return out;
+     }
+   #+END_SRC
+
+** Functions
+
+   You can pass, use, and return R functions from within
+   C++. Note the =_[]= construction for named arguments.
+
+   #+BEGIN_SRC C++
+     Function rnorm("rnorm");
+
+     rnorm(100, _["mean"]=10.2, _["sd"]=3.2);
+   #+END_SRC
+
+** Other Useful Classes
+
+   List, DataFrame, Environment are often directly
+   useful, analogously to how we use them in R.
+
+   (Note: DataFrames are not easy to use as input
+   because of static typing.)
+
+   There are other specialized classes in the library
+   that are less commonly used but are valuable
+   when you need them: SEXP, DottedPair, ....
+
+** STL Interface
+
+   One of the big advantages of C++ is a fantastic
+   and well-tuned run-time library. The STL is the
+   center of this. Rcpp plays nicely with the STL.
+
+   An important type in the STL is the /iterator/
+   over some collection.
+
+   #+BEGIN_SRC C++
+     double iteratorSum(NumericVector x) {
+         double total = 0;
+         NumericVector::iterator it;
+         for(it = x.begin(); it != x.end(); ++it) {
+           total += *it;
+         }
+         return total;
+     }
+   #+END_SRC
+
+   Note operations
+   + =.begin()=  :: iterator pointing to beginning of collection
+   + =.end()=    :: iterator pointing just past the end
+   +  == or != :: equality checks (cf. distance)
+   +  =++=       :: advance (also =--= for bidirectional iterators)
+   +  =*=        :: dereferencing.
+
+   Algorithms:
+
+   #+BEGIN_SRC C++
+     // sum a vector from beginning to end
+     double s = std::accumulate(x.begin(), x.end(), 0.0);
+
+     // prod of elements from beginning to end
+     int p = std::accumulate(vec.begin(),
+                             vec.end(), 1, std::multiplies<int>());
+
+     // inner_product to compute sum of squares
+     double s2 = std::inner_product(res.begin(), res.end(),
+                                    res.begin(), 0.0);
+   #+END_SRC
+
+   Another example:
+
+   #+BEGIN_SRC C++
+     IntegerVector findInterval(NumericVector x, NumericVector breaks) {
+         IntegerVector out(x.size());
+
+         NumericVector::iterator it, pos;
+         IntegerVector::iterator out_it;
+
+         for(it = x.begin(), out_it = out.begin(); it != x.end();
+             ++it, ++out_it) {
+           pos = std::upper_bound(breaks.begin(), breaks.end(), *it);
+           *out_it = std::distance(breaks.begin(), pos);
+         }
+
+         return out;
+     }
+   #+END_SRC
+
+* Rcpp Syntactic Sugar
+
+  Rcpp provides R-like ``syntactic sugar'' for
+  operating on vectors in a concise way.
+
+  Commonly types of functions:
+
+  + Math functions: abs(), ceil(), sin(), cos(), ...
+  + Scalar summaries: min(), max(), sum(), ...
+  + Vector summaries: cumsum(), diff(), pmin(), pmax()
+  + Search: match(), which_max(), duplicates(), unique(), ...
+  + Distribution functions (d, q, p, and r versions)
+  + Vector views: head(), tail(), rev(), seq_along(), seq_len(),
+                  rep_each(), rep_len()
+
+* And More
+
+  There are many additional deep features in Rcpp that
+  are useful in practice. Check the resources.
+
+  There are also many plugins and packages that are
+  easy to include and use:
+
+    + Fast matrix computations (Armadillo)
+    + Eigenvalue Problems (Eigen)
+    + Optimization
+    + Monte Carlo Simulation
+    + Numpy interface
+    + Boost interfaces
+
+  See http://rcpp.org/ for links to these packages.
