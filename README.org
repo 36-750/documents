@@ -9,23 +9,9 @@ This repository contains:
 
 * Contact Info
 
-  - Christopher Genovese, [[mailto:genovese@cmu.edu][genovese@cmu.edu]]
   - Alex Reinhart, [[mailto:areinhar@stat.cmu.edu][areinhar@stat.cmu.edu]]
+  - Christopher Genovese, [[mailto:genovese@cmu.edu][genovese@cmu.edu]]
 
   Please include [650] or [750] in the subject when you email us, so we can
   prioritize your email.
 
-* Fall 2017 Office Hours Schedule
-
-  | Day       |      Time | Person | Location |
-  |-----------+-----------+--------+----------|
-  | Monday    | 2:30-3:30 | Chris  | BH 232E  |
-  | Tuesday   |       4-5 | Justin | BH 232K  |
-  | Wednesday | 1:30-2:30 | Chris  | BH 232E  |
-  | Wednesday | 2:30-3:30 | Alex   | BH 132Q  |
-  | Thursday  |       3-4 | Chris  | BH 232E  |
-  | Friday    | 2:30-3:30 | Alex   | BH 132A  |
-
-  As always, if you can't make it to office hours or need extra help, don't
-  hesitate to email us (with [650] or [750] in the subject line!) or ask for an
-  appointment.
