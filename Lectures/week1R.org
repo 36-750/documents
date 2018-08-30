@@ -50,7 +50,7 @@ If you haven't already, do it *now*:
    Create directories =s750= and =bin= and
    switch to =s750=.
 
- k   #+begin_src sh
+    #+begin_src sh
      mkdir s750 bin
      cd s750
    #+end_src
