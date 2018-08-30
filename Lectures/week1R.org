@@ -37,8 +37,6 @@ If you haven't already, do it *now*:
 
     Then *exit and restart* Git Bash.
 
-    cd ~/Documents
-
 ** Go Home
 
    Move to your home directory.  (How?)
