@@ -15,3 +15,11 @@ This repository contains:
   Please include [650] or [750] in the subject when you email us, so we can
   prioritize your email.
 
+* Office hours
+
+  | Day       |      Time | Person | Location |
+  |-----------+-----------+--------+----------|
+  | Monday    | 1:30-2:30 | Chris  | BH 232E  |
+  | Wednesday | 2:30-3:30 | Alex   | BH 232K  |
+  | Wednesday | 3:30-4:30 | Chris  | BH 232E  |
+  | Friday    |    2:30-4 | Alex   | BH 232K  |
