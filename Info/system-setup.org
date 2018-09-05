@@ -1,0 +1,147 @@
+#+TITLE: Setting up your PATH and directories
+#+AUTHOR: Alex Reinhart and Christopher Genovese
+#+DATE: 5 Sep 2018
+
+It'll be easiest if everyone in the class has a similar setup for Git, Python,
+R, their class repositories, and so on, so we can provide instructions that
+apply to everyone. These instructions will get you set up and running.
+
+Make sure you've already installed [[https://git-scm.com/][Git]] and registered for a [[https://github.com/][GitHub]] account.
+
+** Windows Pre-Setup
+
+    First, *Windows users* running Git Bash need to run a script
+    to set up their environment. We posted the script in the documents
+    repository:
+
+    #+begin_src sh
+      cd ~
+      curl https://raw.githubusercontent.com/36-750/documents/master/ClassFiles/week1/setup-profile.py | python -
+    #+end_src
+
+    Then *exit and restart* Git Bash.
+
+    The =setup-profile.py= script does a few things: it sets up Python and R to
+    work correctly on Windows under Git Bash, adds R to the =PATH= so Git Bash can
+    find it, and sets your home directory to be =C:/Users/yourusername/Documents=.
+
+** Mac and Linux Pre-Setup
+
+   Mac and Linux users should be able to run Python and R from the command line
+   with no extra setup, once they are installed. You should verify that they run
+   correctly:
+
+   #+BEGIN_SRC sh
+     R --version
+     python --version
+   #+END_SRC
+
+   These commands should print out the versions of R and Python you have
+   installed. Make sure you installed Python 3, not 2 -- preferably Python 3.5
+   or higher.
+
+   Next, we need to update your =PATH= environment variable to include the =~/bin=
+   directory we'll use to store scripts and commands (like the =new-homework=
+   script). We'll create =~/bin= in the next step of these instructions.
+
+   Open the file =~/.profile= (note the dot!) in your favorite text editor. You
+   may have one already, or you may need to create a new one. To the end of the
+   file, add the line
+
+   #+BEGIN_SRC sh
+     export PATH="~/bin:$PATH"
+   #+END_SRC
+
+   to put =~/bin= on your =PATH=. Restart any terminal/shell windows you have open
+   for this to take effect.
+
+** Create a Class Directory and Move There
+
+   Now move to your home directory. Create directories =s750= and =bin= and switch
+   to =s750=.
+
+    #+begin_src sh
+     cd
+     mkdir s750 bin
+     cd s750
+   #+end_src
+
+   The =bin= directory is where you will keep any
+   utility scripts/programs that you want to use
+   regularly.
+
+   The =s750= directory is where you will keep
+   all your work for this course throughout
+   the semester.
+
+** Setting Up Your Repositories
+
+   When you have Git installed and have a GitHub
+   account, do the following. Otherwise, you
+   should do both steps before proceeding,
+   as described in an email from Alex.
+
+   If you try to do this later, remember to do it
+   only *after* doing =cd ~/s750= first.
+
+   1. Clone the course repositories
+
+      #+begin_src sh
+        git clone https://github.com/36-750/documents.git
+        git clone https://github.com/36-750/problem-bank.git
+      #+end_src
+
+      You will probably need to use your GitHub username and password.
+
+      If you get an error when you run the second command, you need to check
+      your email for the GitHub invitation to join the 36-750 organization, and
+      accept the invitation.
+
+   2. Clone your assignment repository. Do
+
+      #+begin_src sh
+        git clone https://github.com/36-750/assignments-YOURUSERNAME.git
+      #+end_src
+
+      replacing YOURUSERNAME with your GitHub account name in the command.
+
+   3. Verify that everything looks right:
+
+      #+BEGIN_SRC sh
+        ls ~/s750
+      #+END_SRC
+
+      should list three directories: =documents=, =problem-bank=, and
+      =assignments-YOURUSERNAME=. If this is *not* what you see, verify that you
+      followed the steps above, or ask us for help.
+
+** Installing the =new-homework= Script
+
+   The =new-homework= script is provided in the =documents= repository. First, make
+   sure you have the latest version of the =documents= repository:
+
+   #+BEGIN_SRC sh
+     cd ~/s750/documents
+     git pull
+   #+END_SRC
+
+   You can then copy =new-homework= to your =~/bin= and mark it executable:
+
+   #+BEGIN_SRC sh
+     cp Bin/new-homework ~/bin
+     chmod +x ~/bin/new-homework
+   #+END_SRC
+
+   Try running the script to make sure it worked. It should print out a brief
+   summary of its options:
+
+   #+BEGIN_SRC sh
+     new-homework
+   #+END_SRC
+
+   If you get a message like "command not found", either =~/bin= is not on your
+   =PATH= or something went wrong copying the file; double-check or ask us for
+   help.
+
+   Directions for /using/ the =new-homework= command are provided in the
+   [[https://github.com/36-750/problem-bank#assignment-submission-instructions][problem-bank README]] file.
