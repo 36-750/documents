@@ -132,6 +132,16 @@ Make sure you've already installed [[https://git-scm.com/][Git]] and registered 
      chmod +x ~/bin/new-homework
    #+END_SRC
 
+   Before you can run the script, you'll need to install a Python package that
+   lets Python scripts use Git. Run
+
+   #+BEGIN_SRC sh
+     pip install GitPython
+   #+END_SRC
+
+   and let it install the GitPython package. (This is like installing a package
+   from CRAN in R.)
+
    Try running the script to make sure it worked. It should print out a brief
    summary of its options:
 
