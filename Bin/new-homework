@@ -1,0 +1,524 @@
+#! /bin/bash
+# -*- mode: python; coding: utf-8 -*-
+
+# This file is used as both a shell script and as a Python script. See e.g.,
+# softwareswirl.blogspot.com/2011/06/starting-python-script-intelligently.html.
+# See __doc__ below for the python script docstring.
+
+""":"
+PYTHON=""
+declare -a candidate_pythons=()
+
+findPythons () {
+  IFS=: read -r -a test_path <<< "$PATH"
+  for dir in "${test_path[@]}"
+  do
+    if [[ -d "$dir" ]]; then
+      while IFS= read -r line; do
+        candidate_pythons+=("$line")
+      done < <(find "$dir" -maxdepth 1 -name "python[2-9].[0-9]")
+    fi
+  done 
+
+  for exe in "python3" "python" "python2"
+  do
+    while IFS= read -r line; do
+      if [[ -n "$line" ]]; then
+        candidate_pythons+=("$line")
+      fi
+    done < <(type -p -a "$exe")
+  done
+
+  found="$(for p in "${candidate_pythons[@]}"
+  do
+    echo $("$p" -c 'import platform; print(platform.python_version())')';'$p
+  done | sort -t '.' -gr -k 1,1 -k 2,2 -k 3,3 | head -1)"
+
+  PYTHON="${found#*;}"
+  test -n "$PYTHON"
+}
+
+if ! findPythons ; then
+    echo >&2 "Cannot find an appropriate Python!"
+    exit 1
+fi
+
+exec "$PYTHON" "$0" "$@"
+" """
+
+__doc__ = \
+""" new-homework -- Prepare repository for a new homework assignment
+
+This utility carries out all the steps required to initialize a new
+assignment in your homework repository, including:
+
+1. Creating a subdirectory for the assignment in the homework repository
+2. Installing the problem description and relevant files into that directory
+3. Creating a new branch for the assignment off the correct base
+4. Checking out that branch
+5. Doing an initial commit on that branch with the basic assignment files
+
+In a typical workflow, one runs this from within the homework respository,
+where the problem bank repository is a sibling directory (a child of
+the homework repository's parent directory). Then it suffices to
+issue the command
+
+    new-homework name
+
+for a standalone assignment or
+
+    new-homework -a name
+
+for a vignette exercise or challenge part, where name is the
+assignment name (all lower case, no file extension) as specified in
+the problem bank. The -a (--auto) argument here sets the branch name
+to name-N based on the previous name-M branch, if any. If you also
+supply -x (--suffix) you can specify a larger number, such as when
+skipping vignette exercises. To avoid reinstalling description and
+resource files in later parts, you can add --no-install.
+
+More generally, the homework repository and problem-bank locations can
+be specified on the command line (with --repo and --problems, respectively)
+or via environment variables (X50_HW_REPO and X50_HW_PROBLEMS, respectively).
+For the latter, you can enter lines like one or both of
+
+    export X50_HW_REPO      directory-path-without-trailing-slash
+    export X50_HW_PROBLEMS  directory-path-without-trailing-slash
+
+in your bash .profile file.
+
+Ordinarily, the script will exit with an error if the assignment
+branch already exists, but that can be overridden with
+--warn-if-exists. It also makes a stringent check on the repository
+to ensure that it is indeed a homework repository. You can loosen
+the checks with the --skip-checks option. You can also control
+whether files are installed and whether the initial commit is made.
+See the --help summary.
+
+"""
+
+import sys
+import os
+import os.path
+import re
+import argparse
+import shutil
+
+from contextlib import contextmanager
+
+from git import Repo
+from git.exc import InvalidGitRepositoryError
+
+__version__ = '0.3.3'
+verbose = False
+
+@contextmanager
+def cd(newdir):
+    prevdir = os.getcwd()
+    os.chdir(os.path.expanduser(newdir))
+    try:
+        yield
+    finally:
+        os.chdir(prevdir)
+
+def die(*msgs):
+    for msg in msgs:
+        print("\x1b[31;1m[Error]\x1b[0m " + msg, file=sys.stderr)
+    sys.exit(1)
+
+def log(msg):
+    if verbose:
+        print(":: " + msg, file=sys.stderr)
+
+def validate(repo):
+    """Check if homework repository is valid. Return repo or None if invalid."""
+    # Currently no rules to check
+    return repo
+
+def strictly_validate(repo, name, problem_bank=None):
+    """
+    Check if repository and branch name are valid according to strict rules.
+    These are:
+    
+    + name contains only valid characters [-a-zA-Z_0-9.]
+    + name is a recognized assignment (only checked if problem_bank not None)
+    + repo has a tag or branch named clean-start
+
+    Return a (boolean, string) pair with (valid?, reason).
+    """
+
+    if not re.match(r'[-a-zA-Z_0-9]+$', name):
+        return (False, 'invalid characters in assignment name')
+
+    if problem_bank is not None:
+        if not os.path.exists(os.path.join(problem_bank, name + ".pdf")):
+            return (False, 'assignment name does match an existing problem')
+
+    if 'clean-start' not in repo.refs:
+        return (False, 'repo does not have a ref named clean-start')
+
+    return (True, '')
+
+def try_repo(maybe_dir, message="Using"):
+    """Check if maybe_dir is a git repository."""
+    if not os.path.isdir(maybe_dir): return None
+    try:
+        r = Repo(maybe_dir)
+        log("{} {} as homework repository".format(message, maybe_dir))
+    except InvalidGitRepositoryError:
+        r = None
+    return r
+
+def guess_repo(starting_dir):
+    """Try to find an assignment repo, looking near starting_dir and guessing.
+    A matching directory has a name assignments-* and is a git repository.
+    The search order is starting_dir, then directories in starting_dir,
+    its parents, its grandparents, ~/s750, ~s650.
+    
+    """
+    home = os.environ['HOME']
+    hw_re = re.compile(r'^assignments-')
+    guess_dirs = [os.path.abspath(starting_dir),
+                  os.path.abspath(os.path.join(starting_dir, '..')),
+                  os.path.abspath(os.path.join(starting_dir, '..', '..')),
+                  os.path.join(home, 's750'),
+                  os.path.join(home, 's650')]
+
+    # Check first where we are and directly above
+    for d, name in [(d, os.path.basename(d)) for d in guess_dirs[0:2]]:
+        if re.match(hw_re, name) and os.path.isdir(d):
+            log("Checking dir {}".format(d))
+            r = try_repo(d, "Guessing")
+            if r is not None:
+                return r
+
+    for dir in guess_dirs:
+        try:
+            cand = os.listdir(dir)
+            for d in [os.path.join(dir,f) for f in cand if re.match(hw_re, f)]:
+                if os.path.isdir(d):
+                    log("Checking dir {}".format(d))
+                    r = try_repo(d, "Guessing")
+                    if r is not None:
+                        return r
+        except OSError:
+            pass
+    return None
+
+def find_repo(maybe_repo, guess, cwd):
+    """Find the assignments respository starting from an initial candidate.
+    May check environment variable X50_HW_REPO for the repository location.
+    
+    Parameters:
+    + maybe_repo -- if not empty, the repository to use, which must exist
+    + guess      -- if true and repo not found, try to guess intelligently
+    + cwd        -- current working directory
+    
+    """
+    edir = os.environ.get('X50_HW_REPO')
+    repo = None
+
+    if maybe_repo:
+        repo = try_repo(maybe_repo)
+        if repo is None:
+            die('Cannot find specified repository {}'.format(maybe_repo))
+
+    if edir and repo is None:  repo = try_repo(os.path.abspath(edir))
+    if guess and repo is None: repo = guess_repo(cwd)      
+    if repo is None:           repo = try_repo(cwd)
+        
+    return validate(repo)
+
+def hw_branch_exists(repo, name):
+    """Return hw branch ref if it exists, or False."""
+    if name in repo.refs:
+        return repo.refs[name]
+    return False
+
+def branch_base_dir_names(repo, name, options):
+    """Set the names for the hw branch, base branch, and hw documents/directory.
+
+    Parameters:
+    + repo    -- homework repository (to find branch names)
+    + name    -- assignment name as given on the command line
+    + options -- command line options setttings
+
+    Return tuple (branch_name, base_name, doc_name, auto-second-branch?)
+    """
+    hw_name, base_name, hdir_name = (name, options.base or 'master', name)
+    building = False
+
+    if options.auto and options.name:
+        die("Cannot give --auto and --name together.")
+    elif options.name:
+        hdir_name = options.name or hdir_name
+    elif options.auto:
+        M = 0
+        brx = re.compile(name + r'-\d+$')
+        prev = [(b.name, int(re.split('-',b.name)[-1]))
+                for b in repo.branches if re.match(brx, b.name)]
+        if prev:
+            base_name, M = sorted(prev, key=lambda x: x[1], reverse=True)[0]
+            if options.suffix > M:
+                hw_name = name + "-" + str(options.suffix)
+            elif options.suffix == 0:
+                hw_name = name + "-" + str(M+1)
+            else:
+                die("When given, --suffix {} must exceed max branch suffix {}."
+                    .format(options.suffix, M))
+            building = True
+            log("On auto, detected previous branch {}, adding {}"
+                .format(hw_name, base_name))
+        else:
+            hw_name = name + "-1"
+
+    log("Calculated names for branch {}, base {}, dirs {}"
+        .format(hw_name, base_name, hdir_name))
+    return (hw_name, base_name, hdir_name, building)
+
+def make_hw_directory(hw_dir, hdir_name):
+    try:
+        os.mkdir(hdir_name)
+        log("Creating directory for work on {}".format(hdir_name))
+    except FileExistsError:
+        if not prevb:
+            print("Warning: directory {} already exists; continuing anyway..."
+                  .format(hdir_name), file=sys.stderr)
+    # Put a .gitkeep file so the directory is at least tracked
+    try:
+        with open(os.path.join(hw_dir, '.gitkeep'), 'w') as f:
+            print("", file=f)
+    except IOError:
+        die("Cannot write file in homework directory")
+
+def make_hw_branch(repo, name, base):
+    """Create (if new) and checkout the homework branch name."""
+    b = hw_branch_exists(repo, name)
+    if b:
+        repo.refs[name].checkout()
+        return b
+
+    if base not in repo.refs:
+        die("Base branch {} does not exist".format(base))
+
+    repo.git.checkout(base, b=name)
+    return repo.refs[name]
+
+def check_problem_bank(repo_dir, problem_base):
+    """Find the local problem bank and check that it is accessible."""
+    problem_bank = (problem_base and os.path.abspath(problem_base)) or \
+        os.environ.get('X50_HW_PROBLEMS') or \
+        os.path.normpath(os.path.join(repo_dir, "../problem-bank"))
+
+    if not problem_bank or not os.access(problem_bank, os.R_OK):
+        problem_bank = ''
+        log("Cannot find problem bank repository; see --problems option.")
+
+    return problem_bank
+
+def install_problem(name, hw_dir, problem_bank):
+    """Move assignment description and related files into our repository.
+
+    If problem_bank is empty, the directory is missing; note in log.
+
+    Return list of installed files and directories (not recursively)
+    relative to repository root directory.
+
+    """
+    if not problem_bank:
+        print("Warning: Missing problem bank, skipping file install.")
+        print("To install later, run with --warn-if-exists and, if appropriate, ")
+        print("use the --problems option to specify location of the problem bank.")
+        return []
+            
+
+    pdf = "{}.pdf".format(name)
+    base = ['Data', 'Resources']
+    copies = [(os.path.join(problem_bank, d, name),
+               os.path.join(hw_dir, d),
+               d) for d in base]
+    installed = []
+
+    try:
+        shutil.copyfile(os.path.join(problem_bank, "All", pdf),
+                        os.path.join(hw_dir, pdf))
+        installed.append(os.path.join(name, pdf))
+    except IOError as e:
+        print("Warning: Could not install PDF file from problem bank: "
+              "{e.strerror} (errno={e.errno}) file {e.filename}.".format(e=e),
+              file=sys.stderr)
+
+    for src, dest, dirname in copies:
+        if os.path.isdir(src) and not os.path.exists(dest):
+            try:
+                shutil.copytree(src, dest)
+                installed.append(os.path.join(name, dirname))
+            except shutil.Error as errs:
+                for (s,d,why) in errs.args[0]:
+                    print("Warning: could not copy {s} to {d} ({why})"
+                          .format(s=s, d=d, why=why), file=sys.stderr)
+    return installed
+
+
+### Main Script
+
+parser = argparse.ArgumentParser(description="Prepare repository "
+                                 "for a new homework assignment.",
+                                 formatter_class=argparse.RawDescriptionHelpFormatter,
+                                 epilog=__doc__[__doc__.index('\n'):])
+parser.add_argument("-a", "--auto",
+                    default=False,
+                    action='store_true',
+                    help="Derive --base and branch names from assignment name. "
+                    "If -name is also suppled, an error is issued."
+                    "Given name, branch will be name-N, where N is the smallest "
+                    "integer>=1 such that there is no name-N branch already, "
+                    "and base will be the previous existing name-M or the value " 
+                    "of base or master if none. Use --suffix to set N (but not M).")
+
+parser.add_argument("-b", "--base",
+                    type=str,
+                    default='',
+                    help="Starting point at which to create the new assignment branch. "
+                    "Defaults to master, the tip of the master branch. This options "
+                    "is used primarily for assignments that build on previous assignments,"
+                    "like vignette exercies or challenge parts after the first."
+                    "If --auto is supplied this is used for the base of the first "
+                    "branch in the chain and ignored otherwise.")
+
+parser.add_argument("-g", "--guess-repo",
+                    default=False,
+                    action='store_true',
+                    help="If no repo is specified on the command line or in the "
+                    "environment, attempt to find it nearby or in a few likely "
+                    "directories below the user's HOME.")
+
+parser.add_argument("-n", "--name",
+                    type=str,
+                    default='',
+                    help="Name to use for document basename and homework directory "
+                    "if --auto/--suffix are not sufficient and if this "
+                    "name should be different from the assignment branch name."
+                    "An error is issued if --auto is supplied; --suffix ignored.")
+
+parser.add_argument("--no-commit",
+                    default=False,
+                    action='store_true',
+                    help="Skip initial commit on assignment branch.")
+
+parser.add_argument("--no-install",
+                    default=False,
+                    action='store_true',
+                    help="Skip installation of assignment files.")
+
+parser.add_argument("-p", "--problems",
+                    type=str,
+                    default="",
+                    help="Path of problem-bank repository directory. "
+                    "If not supplied, use X50_HW_PROBLEMS environment variable,"
+                    "and otherwise ../problem-bank from the homework repo.")
+
+parser.add_argument("-r", "--repo",
+                    type=str,
+                    default="",
+                    help="Path of assignments repository directory. "
+                    "If not supplied, use the value of environment variable "
+                    "X50_HW_REPO if defined, or a guessed directory if -g option"
+                    "is supplied, or the current directory otherwise.")
+
+parser.add_argument("-s", "--skip-checks",
+                    default=False,
+                    action='store_true',
+                    help="Skip the more stringent checks on whether the "
+                    "assignments repository is valid.")
+
+parser.add_argument("-v", "--verbose",
+                    default=False,
+                    action='store_true',
+                    help="Provide a log of actions taken to standard error.")
+
+parser.add_argument("--version",
+                    action='version',
+                    version='%(prog)s ' + __version__,
+                    help="Show version information and exit.")
+
+parser.add_argument("-w", "--warn-if-exists",
+                    default=False,
+                    action='store_true',
+                    help="Warn without failure if homework branch already exists.")
+
+parser.add_argument("-x", "--suffix",
+                    default=0,
+                    type=int,
+                    help="With --auto, integer suffix for the branch name."
+                    "Given assignment name, --base will be the largest name-M "
+                    "and branch will be name-N where N is given here. It is an "
+                    "error if N <= M.")
+
+parser.add_argument("assignment",
+                    type=str,
+                    help="Name of the homework assignment to create. Use the "
+                    "official name from the homework repository, like "
+                    "test-this-1 or anagrams.")
+
+args = parser.parse_args()
+verbose = args.verbose
+aname = args.assignment
+
+cwd = os.getcwd()
+
+# Find and check the homework repository
+repo = find_repo(args.repo, args.guess_repo, cwd)
+if repo is None:
+    die("Could not find a valid homework repository.")
+
+valid, why = strictly_validate(repo, aname) if not args.skip_checks else (True, '');
+if not valid:
+    die("Repository {0} fails strict validity checks ({1}).".format(repo, why),
+        "If this is assessment incorrect, consider using --skip-checks.")
+
+if repo.is_dirty():
+    die("Your repository has uncommitted changes; ",
+        "You must commit or stash all changes before creating a new branche.")
+
+hw_branch, base, hdir_name, prevb = branch_base_dir_names(repo, aname, args)
+
+branch_exists = hw_branch_exists(repo, hw_branch)
+if branch_exists:
+    if args.warn_if_exists:
+        print("Branch {} already exists, continuing anyway."
+              .format(hw_branch), file=sys.stderr)
+    else:
+        branch_exists.checkout()        
+        die("You already have a branch named {}.".format(hw_branch),
+            "Checking out branch and exiting with no other action taken.",
+            "To continue, re-run with --warn-if-exists; "
+            "see options --no-install and --no-commit.")
+
+problem_bank = check_problem_bank(repo.working_tree_dir, args.problems)
+hw_dir = os.path.join(repo.working_tree_dir, hdir_name)
+
+# Create the branch, install relevant files, and make initial commit
+with cd(repo.working_tree_dir):
+    make_hw_directory(hw_dir, hdir_name)
+
+    if not args.no_install:
+        files = install_problem(hdir_name, hw_dir, problem_bank)
+        log('Installed files: {}'.format(", ".join(files)))
+
+    branch = make_hw_branch(repo, hw_branch, base)
+
+    if not args.no_commit:
+        # Add a clean initial commit on the branch with the installed files
+        try:
+            repo.index.add([hdir_name])
+        except OSError as err:
+            print(err.filename, err.errno)
+            die("Cannot stage installed files in repository", err)
+        repo.index.commit("Files installed to start work on {}".format(hdir_name))
+        log("Committing initial state of work on branch {}.".format(hw_branch))
+
+print("Switched to branch {} for assignment {}.\n"
+      "Type 'cd {}' at the shell prompt, and you are ready to work!"
+      .format(hw_branch, hdir_name, os.path.relpath(hw_dir, cwd)),
+      file=sys.stderr)
