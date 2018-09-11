@@ -1,0 +1,375 @@
+* Why handle errors?
+
+  Your code will frequently need to handle errors -- either caused by a user
+  passing the wrong input or your code hitting an exceptional case.
+
+  - Another function passes the wrong kind of data to your function
+  - Algorithm fails to converge
+  - Couldn't open the data file
+  - Couldn't connect to the SQL database
+  - Network connection failed
+  - ...etc.
+
+  I've seen a lot of code like this:
+
+  #+BEGIN_SRC python
+    def read_data_file(filename, max_rows, format_args):
+      if not os.path.isfile(filename):
+        return "File not found"
+
+      f = open(filename, "r")
+
+      # do stuff...
+  #+END_SRC
+
+  Or:
+
+  #+BEGIN_SRC R
+    crowded_cows <- function(cows, K) {
+        if (K > length(cows) || K < 1) {
+            cat("K is out of range")
+            return
+        }
+
+        # do stuff...
+
+        if (there is no crowded cow) {
+            cat("No crowded cows")
+            return
+        }
+    }
+  #+END_SRC
+
+  When you're working interactively in the REPL, manually calling functions to
+  do things, this isn't a big deal. You can read the message and decide what to
+  do.
+
+  But when you're writing a large project with many functions, all calling each
+  other to do some complicated analysis, you shouldn't need to handle every
+  error manually. How is a function calling the above =crowded_cows= supposed to
+  detect which error has occurred?
+
+  Errors are part of the logic of the program, and we should be able to write
+  code which handles errors and does specific things to handle them.
+
+  If we simply return a special value on errors, or just print a message, it's
+  very easy to accidentally ignore an error or, worse, use the return value as
+  though it were a real value. And there's no flexibility: If sometimes you want
+  to log a message and sometimes you want execution to stop entirely, you have
+  to code that logic into every function.
+
+  How can we reliably indicate error conditions and write code to deal with
+  them?
+
+* Errors versus assertions
+
+  Earlier we discussed using /assertions/ to make claims about facts in your
+  code, and to program defensively. But when would I use an assertion and when
+  would I use an error? What's the semantic difference?
+
+  Errors are for unexpected conditions which could be /handled/ by the calling
+  code, which may want to perform some action to work around the error, fix it,
+  or report it to the user.
+
+  An assertion indicates something which /must be true/ if the program is
+  functioning correctly. If an assertion is false, there's nothing to handle or
+  recover from: the code is wrong and must be fixed. Assertions are sanity
+  checks that things are working as expected.
+
+  To give a real-life example, suppose someone gives you directions to drive to
+  their house. (Actual directions, not just Google Maps live instructions.) An
+  error occurs when you can't recognize where you are and don't know what to do
+  next. Your mental directions-following algorithm can recover from this error:
+  maybe go back and retrace your steps, or call your friend, or check Google
+  Maps to see where you are. This is a recoverable error.
+
+  An assertion, which your directions-following algorithm assumes is always
+  true, is that your vehicle is on the ground, preferably on a road. If you find
+  yourself underwater, the assertion has failed, and you are probably not
+  getting to your friend's house today. You can't simply look on Google Maps and
+  get directions to drive out of the lake. Your "how to get to Farmer Brown's
+  house" instructions do not know how to deal with this case at all.
+
+  So an error is a foreseeable problem which your code can detect and
+  potentially recover from; an assertion is something which must be true for
+  your code to even be correct at all.
+
+* Error handling paradigms
+** Exceptions
+
+   Exceptions signal an error to be handled by code somewhere up the call
+   stack. Exceptions have a type -- there are different kinds of exceptions, and
+   code can decide which to handle and which to pass on. You can define new
+   kinds of exceptions for your own code.
+
+   Exceptions are available in Python, Java, C++, JavaScript, Julia, and many
+   other languages.
+
+   Code can /catch/ exceptions caused by functions they call, or functions called
+   by those functions, and so on, and try to /recover/ from the exceptions.
+
+   Consider my model-fitting function example again:
+
+   #+BEGIN_SRC python
+     def fit(data, initial_guess, max_iterations=100, ...):
+
+         current_solution = initial_guess
+         current_likelihood = likelihood(data, initial_guess)
+
+         converged = False
+
+         for it in range(max_iterations):
+             next_step = update(data, current_solution)
+             new_likelihood = likelihood(data, next_step)
+
+             assert valid(next_step), "Solution is invalid"
+             assert new_likelihood >= current_likelihood, \
+                 "Likelihood did not decrease"
+
+
+             if sufficiently_close(current_solution, next_step):
+                 return next_step
+
+             current_solution = next_step
+             current_likelihood = new_likelihood
+
+         raise ConvergenceError("Failed to converge after {} iterations".format(it))
+
+     def update(data, solution):
+         delta = invert_big_matrix(solution)
+
+         # do complicated math
+         # ...
+
+         return next_step
+   #+END_SRC
+
+   This model-fitting involves several functions:
+
+   #+BEGIN_SRC ditaa :file ../Figures/exceptions.png
+     +--------+    +-------+    +----------+    +---------------------+
+     |        |    |       |    |          |    |                     |
+     | main() |----> fit() |----> update() |----> invert_big_matrix() |
+     |        |    |       |    |          |    |                     |
+     +--------+    +-------+    +----------+    +---------------------+
+   #+END_SRC
+
+   #+RESULTS:
+   [[file:../Figures/exceptions.png]]
+
+   Suppose =fit= fails to converge, and raises the =ConvergenceError=.
+
+   A raised exception causes the function to abort, and control returns to the
+   calling function. If the calling function (=main=) does not /catch/ the
+   exception, it also aborts. If no function catches the exception, your code
+   crashes and an error is printed:
+
+   #+BEGIN_EXAMPLE
+     Traceback (most recent call last):
+       File "exception.py", line 21, in <module>
+         main()
+       File "exception.py", line 15, in main
+         fit([], 10, 30)
+       File "exception.py", line 11, in fit
+         raise ConvergenceError("Failed to converge after {} iterations".format(it))
+   #+END_EXAMPLE
+
+   To catch the exception up in =main=, we use a =try= block:
+
+   #+BEGIN_SRC python
+     def main():
+         try:
+             fit(data, -4, max_iterations=10)
+         except ConvergenceError as e:
+             print(e.args)
+             print(e)
+             ...
+             # do something clever here
+   #+END_SRC
+
+   Any exception inside the =try= block can be /caught/ by the exception handler.
+   Notice the exception handler specifies the kind of exceptions it handles. If
+   your code can fail in multiple ways, you can define =except= clauses for each.
+   You can also create new kinds of exceptions not built in to the language. If
+   you don't write a handler for a specific type of exception, that exception
+   will abort your function and proceed upwards until something /does/ handle it.
+
+   What could we do here? We could imagine that, if we catch a =ConvergenceError=,
+   =main= may want to retry the model fit with different parameters or maybe a
+   different type of fitting algorithm. It could do this entirely automatically,
+   without our intervention. Or it could do nothing, not catching the exception,
+   in which case the program will crash and the user will have to do something.
+
+   Exceptions allow some clever error handling. For example, the "retrying"
+   package wraps functions to automatically catch certain kinds of errors and
+   retry:
+
+   #+BEGIN_SRC python
+     @retry(wait_exponential_multiplier=1000, wait_exponential_max=10000,
+            stop_max_attempt_number=5, retry_on_exception=geocode_error)
+     def geocode(addr, cur, tract=None, max_rating=5):
+         """Geocode an address following a tiered strategy.
+
+         ...
+         """
+         coordinates = geopy.geocode(addr) # might fail
+
+         ...
+   #+END_SRC
+
+   The geocoder has to call an external service (Google Maps), and if the
+   network connection fails or Google's API goes down for a moment, we can catch
+   the error and retry.
+
+** Exceptions in R
+
+   R doesn't actually use exceptions. It has a system of /conditions/, which are
+   more powerful and flexible than exceptions, except that I've never seen them
+   used in R code. Conditions were pioneered in Common Lisp and its
+   predecessors, which used them extensively for error handling.
+
+   The condition system can act like an exception system. To raise a condition
+   (like throwing an exception), call =stop=. It can take an error message (or
+   multiple things which it will =paste()= together to make an error message) as
+   an argument:
+
+   #+BEGIN_SRC R
+     foo <- function(x) {
+         if (x < 0) {
+             stop(x, " is not positive")
+         }
+
+         ## would be easier with
+         ## assert_that(x >= 0)
+         ## but that's beside the point
+     }
+   #+END_SRC
+
+   There are other types of conditions that can be raised; for example, =warning=
+   prints a warning message but does not abort the function, and =message= prints
+   a message. You might use warning messages for things like "Model fit didn't
+   converge to full precision" or some other case where the code can proceed
+   anyway.
+
+   (Why use =warning= or =message= instead of just printing a message? A user can
+   use a condition handler, like =suppressMessages=, to hide messages if they
+   want.)
+
+   The =tryCatch= function runs a block of code, and if a condition is raised,
+   runs the appropriate handler based on what you've provided.
+
+   #+BEGIN_SRC R
+     tryCatch({
+         data <- read_big_file(file)
+         fit_model(data) },
+
+         error=function(e) { (handle error) },
+         file_not_found_error=function(e) { (do something) },
+         convergence_error=function(e) { (do something else) }
+     )
+   #+END_SRC
+
+   (To learn how to define new kinds of errors in R, look at /Advanced R/'s
+   error handling chapter.)
+
+** Conditions
+
+   Exceptions have a weakness: the code recovering from the error (the =except=
+   or =catch= block) is completely separate from the code that was running when
+   the error occurred.
+
+   If function =main= calls =fit= which calls =update=, which calls =invert_big_matrix=,
+   which throws a =SingularMatrixError=, how can =main= handle the error and recover
+   appropriately /without/ knowing the details about how =fit= and =update= work?
+
+   R has a sophisticated condition handling system, stolen from Common Lisp, for
+   handling these kinds of problems. You probably haven't seen it before -- R is
+   usually used interactively, so /you/ are the condition handler. But for
+   robust, reliable programs, you need automation.
+
+   But we can imagine there are many possible ways to handle this
+   =SingularMatrixError=. We could
+
+   - Rescale the =data= to avoid numerical issues
+   - Remove variables from the =data= which are nearly colinear and might be
+     causing this problem
+   - Calculate an approximate inverse
+   - Fall back to an alternative way of calculating the update step
+
+   A condition handler is a bit like an exception handler, except it allows the
+   function which raised the condition to /continue running/ -- the handler
+   decides what the function should do to recover.
+
+   #+BEGIN_SRC R
+     invert_big_matrix <- function(mat) {
+         if (invertible(mat)) {
+             ## calculate big inverse with fancy algorithm
+             ...
+
+             return(inverse)
+         }
+
+         return(withRestarts(
+             stop(singular_matrix_error(mat)),
+             rescale_matrix=function() { invert_big_matrix(rescaled(mat)) },
+             approximate_inverse=function() { approx_inverse(mat) },
+             replace_with=function(replacement) { invert_big_matrix(replacement) },
+             ...
+         ))
+     }
+   #+END_SRC
+
+   If we encounter an error inverting the matrix, we raise a
+   =singular_matrix_error= condition. (Conditions use R's object-oriented
+   programming system; see the resources below to see how to define a new one.)
+   We provide several /restarts/: possible ways of handling and recovering from
+   the error.
+
+   The function calling =invert_big_matrix= chooses which restart should run:
+
+   #+BEGIN_SRC R
+     update <- function(data, solution) {
+         withCallingHandlers({
+             delta <- invert_big_matrix(solution)
+         },
+         singular_matrix_error=function(mat) {
+             invokeRestart("rescale_matrix")
+         })
+     }
+   #+END_SRC
+
+   When =invert_big_matrix= raises the =singular_matrix_error=, notice it returns
+   the value returned by the chosen restart, so =rescale_matrix= can return an
+   inverse from a rescaled version.
+
+   R has default condition handlers for certain conditions. For example, =stop=
+   normally aborts like an exception would. =message= writes its output to the
+   console:
+
+   #+BEGIN_SRC R
+     fit_model <- function(data, max_iters=100) {
+         for it in 1:max_iters {
+             message("Iteration ", it, " of ", max_iters)
+
+             ## calculate stuff
+             ...
+         }
+     }
+
+     fit_model() # noisy
+     suppressMessages(fit_model()) # quiet
+   #+END_SRC
+
+   There is also =warning= for non-fatal errors, like convergence problems, and a
+   similar =suppressWarnings= function to set a restart that /doesn't/ display them.
+
+   (Famously, some Lisp Machines had a default condition handler which displayed
+   the error to the user, and let you /edit the code and resume where it stopped/.
+   You could fix a bug /while the program was running!/)
+
+* Resources
+  - Hadley Wickham's /Advanced R/ has a [[http://adv-r.had.co.nz/Exceptions-Debugging.html][chapter on conditions and debugging]] as
+    well as a more detailed [[http://adv-r.had.co.nz/beyond-exception-handling.html][condition handling guide]].
+  - Python's tutorial has a [[https://docs.python.org/3.5/tutorial/errors.html][section on exception handling]]. (Note that some
+    details changed since Python 2.)
+  - Julia's manual discusses [[https://julia.readthedocs.org/en/latest/manual/control-flow/#exception-handling][handling and creating exceptions]].
