@@ -1,0 +1,53 @@
+#+TITLE: Data Structures \\
+#+TITLE: Statistics 650/750 \\
+#+TITLE: Week 3 Thursday
+#+DATE:  13 Sep 2018
+#+AUTHOR: Christopher Genovese and Alex Reinhart 
+
+* Announcements
+
+  - Challenges are posted (or will be shortly). There are four challenges
+    available:
+
+    | Challenge           | Summary                                                    |
+    |---------------------+------------------------------------------------------------|
+    | anomaly-speed       | Use anomaly detection in videos to track objects           |
+    | autocomplete-me     | Autocomplete user queries from massive database of options |
+    | classification-tree | Build classification trees and use them to classify data   |
+    | shazam              | Automatically recognize music                              |
+
+    The Challenge schedule is:
+
+    |  Part | Description                          | Due    |
+    |-------+--------------------------------------+--------|
+    |     1 | Design and testing                   | Oct 2  |
+    |     2 | Basic implementation                 | Oct 23 |
+    |     3 | Advanced features                    | Nov 13 |
+    |     4 | Extension and interoperation         | Dec 4  |
+    | Final | Final revisions based on TA comments | Dec 13 |
+
+    You may submit a challenge part before the due date, but you should wait for
+    TA feedback before submitting the next part.
+
+    (Not all Parts are completely written in the challenges; we'll update them
+    as the semester advances.)
+
+    As usual, grading is mastery-based: the TAs will leave comments and
+    suggestions and expect you to revise your code as needed. You must revise
+    each part by *at least one week* before the next part is due.
+
+    The Challenge is required. You must Master all four parts to pass the
+    course.
+
+    You should look at the Challenges and pick your favorite soon; if you'd like
+    advice on which Challenge would suit your goals, just ask. You won't be able
+    to switch Challenges after you've submitted your first Challenge part.
+
+    Peer review will be a required part of the Challenges.
+
+  - I have posted new assignments today, about data structures.
+
+  - Next Tuesday: design and data structures activities in class. Be sure to
+    bring your laptops.
+
+* Data Structures
