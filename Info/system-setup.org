@@ -44,9 +44,9 @@ Make sure you've already installed [[https://git-scm.com/][Git]] and registered 
    directory we'll use to store scripts and commands (like the =new-homework=
    script). We'll create =~/bin= in the next step of these instructions.
 
-   Open the file =~/.profile= (note the dot!) in your favorite text editor. You
-   may have one already, or you may need to create a new one. To the end of the
-   file, add the line
+   Open the file =~/.bash_profile= (note the dot!) in your favorite text editor.
+   You may have one already, or you may need to create a new one. To the end of
+   the file, add the line
 
    #+BEGIN_SRC sh
      export PATH="~/bin:$PATH"
