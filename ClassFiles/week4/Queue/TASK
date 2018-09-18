@@ -1,0 +1,29 @@
+#+TITLE: Queue Activity
+
+In daily life, we often have to ``get in line'' to wait
+for service. Two kinds of queueing systems are quite
+common. The /grocery store/ system has many servers
+(cashiers) each with his or her own individual line.
+A customer needs to choose a line and wait. The /passport control/
+system has many servers (border agents) with a single
+line with all travelers. As an agent becomes available, 
+he or she serves the next person in line.
+
+Why would we choose one system over another?
+Which version leads to the lowest average waiting times?
+Does this comparison depend on the nature of the
+random processes governing service and arrival times?
+
+In this task, we will simulate two such queueing systems
+to try to answer these questions.
+
+The files queues.* contain code for simulating these systems
+in different languages. The functions governing management
+of the queues and comparison of the systems are incomplete.
+Your task is to fill these in and compare the systems.
+Feel free to tweek the parameters of the random processes
+in your simulations to get robust results.
+
+You should implement the queues in this code rather than
+using a library.
+

@@ -1,0 +1,4 @@
+2 inc inc inc                 ;; do some math
+end dup dup inc begin 'a def  ;; define a procedure
+a print pop print             ;; apply it and look at results
+

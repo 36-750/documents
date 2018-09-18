@@ -1,0 +1,179 @@
+#+TITLE: Tree Activity 
+
+In this activity, we consider an algorithm that works with trees,
+called the *union-find algorithm*.
+
+Here, we are considering a set of objects; these can be anything
+such as computers in a network, pages on the internet, pixels in an
+image, or locations in a maze. We are looking at two operations on
+these objects:
+
+  1. A *union* command: connect two objects together (and consequently
+    any objects they are each connected to.
+  2. A *find* query: is there a path connecting two specified objects?
+
+The connected groups are disjoint sets of objects.  Consider a
+simple example
+
+#+begin_example
+
+  0 1 2 3 4 5 6 7 8 9              objects
+  {0 1} 2 {4 5} 6 7 {3 8 9}        disjoint sets of objects
+  {3 8 9}                          find query: are 3 and 9 "connected"?
+  {0 1 3 8 9} 2 {4 5} 6 7          union command: connect 0 and 3
+
+#+end_example
+
+Whatever our objects it will be convenient to label them
+from 0 to n-1, where n is the total number of objects.
+
+Our goal is to find a data structure that lets us efficiently
+run union commands and find queries, with very large sets
+of objects and very large numbers of commands/queries.
+
+We will look at implementations of several union-find algorithms.
+In each case, we will build a *forest* of trees.
+
+Start by constructing a few tests for the =union()= command and
+the =find()= query. You will use these below.
+
+* Eager Find
+
+  The files EagerObjectSets.* implement a simple data structure
+  that is fast for find queries but slow for union commands.
+
+  We represent our forest with an array of size n, called
+  =root[]=. Each object represents a node in the forest, and
+  each node is either by itself or part of a tree with
+  one root node and one or more children.
+
+  So this means that ~root[obj_i] = root[obj_j]~ if object
+  =obj_i= and =obj_j= are ``connected.'' We take the value of this
+  to be the root of the tree to which the objects belong.
+
+  Consider the following series of commands and the associated
+  forests. What does the =root[]= array look like at each stage? If we
+  continue connecting nodes until everything is connected, what
+
+  #+begin_example
+   0 1 2 3 4 5 6 7 8 9
+
+   0 1 2 4 5 6 7 8 9         union(3,4)      root[3] = 4 = root[4]
+         |
+         3
+
+   0 1 2 5 6 7 8  9          union(4,9)      root[3] = root[4] = root[9] = 9
+                 / \
+                 4  3
+
+   7 1 2 5 6 8  9            union(0,7)
+   |           / \
+   0           4  3
+   
+   7 1 2 6 8  5              union(3,5)
+   |         /|\
+   0        4 9 3
+
+                             find(9,5) => true
+  #+end_example
+  
+  Implement the =find()= method. Explain what the =union()= method is
+  doing. Roughly how many operations are required given m union
+  commands on n objects? Run your tests.
+
+* Lazy Union  
+
+  The eager find method leads tqo short flat trees, where each
+  object is connected to the root node of the tree. The lazy union
+  approach, illustrated partially in the files LazyObjectSets.*
+  take a different approach.
+
+  Instead of keeping an array =root[]=, we keep an array =parent[]=
+  where ~parent[obj_i]~ is the parent of the tree in which
+  object ~obj_i~ belongs. Implment the =union()= methd and the
+  utillity method =root_of()=. Run your tests.
+
+  #+begin_example
+   0 1 2 3 4 5 6 7 8 9
+
+   0 1 2 3 5 6 7 8 9         union(3,4)
+         |
+         4
+
+   0 1 2 5 6 7 8  3          union(4,9)
+                 / \
+                 4  9
+
+   0 1 2 5 6 8  3            union(0,7)
+   |           / \
+   7           4  9
+   
+   0 1 2 6 8  3              union(3,5)
+   |         /|\
+   7        4 9 5
+  
+     1 2 6 8  3----          union(5,7)
+             /|\  |
+            4 9 5 0
+                  |
+                  7
+  #+end_example
+
+  This is still slow. If the trees get too deep, find gets
+  quite poor performance.
+
+* Fast Union-Find
+
+  We will improve lazy union in two ways:
+
+  1. Weighted unions.
+
+     Each tree keeps track of its size. When
+     joining two trees, connect the smaller
+     tree below the larger one.
+
+     #+begin_example
+       union(3, 7)  :  without weighting, connect 8 to 3
+                    :  with weighting, connect 3 to 8
+
+        8       3
+       / \      |
+      1   4     6
+          |
+          7
+     #+end_example
+
+     This avoid deep trees.
+
+  2. Path compression.
+
+     After computing ~root(obj_i)~ in lazy union,
+     set the parent of each node examined in the
+     process to ~root(obj_i)~.
+
+     #+begin_example
+      root(9) examines objects 9, 6, 3, 1, 0
+
+      connect nodes 9, 6, 3, and 1 (and their subtrees)
+      directly to node 0.
+     #+end_example
+
+
+   With these two improvements, this becomes quite efficient.
+   With m union and find operation on n object, performance is
+   O(n + m lg* n), where lg* n is the number of times lg must
+   be applied to n before the value is 1 or less.
+
+   Implement union and find in the file FastObjectSets.*.
+   Run your tests.
+
+   Hint: A fast one pass approch modifies the =root()= function
+   to make every other node in the path to point to its
+   grandparent.
+
+* Bonus
+
+  As a bonus task for R, try writing a function that takes
+  the forest in either the Eager or Lazy/Fast cases and
+  prints a nice representation. The python code has an
+  example.

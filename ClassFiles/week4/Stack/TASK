@@ -1,0 +1,79 @@
+#+TITLE: Stack Class Activity
+
+In this task, we will build on an implementation of a
+/stack-based/ programming language. The inputs
+to this language are a sequence of simple tokens
+that represent: /integers/, /booleans/, /command names/, and /symbols/
+that can be variables or uninterpreted "strings".
+
+Here's a simple example:
+#+begin_example
+   4 0 gt 2 3 ifelse print
+#+end_example
+
+This program is processed by reading each token in sequence
+and taking corresponding action.  Numbers, booleans, and
+quoted symbols (basically names) are /pushed onto a stack/.
+Symbols that represent command names (which can be dynamically
+defined) execute -- in turn causing changes to the values
+of the stack.
+
+For example, the command =exch= swaps the top two values on the
+stack, and the command =dup= duplicates the top value on the stack.
+(Can you guess what =add= does?)
+
+So when we do:
+#+begin_example
+  4 3 2 1 exch dup add add add add print
+#+end_example
+the stack looks like this in turn
+#+begin_example
+  [4]
+  [4 3]
+  [4 3 2]
+  [4 3 2 1]
+  [4 3 1 2]
+  [4 3 1 2 2]
+  [4 3 1 4]
+  [4 3 5]
+  [4 8]
+  [12]
+#+end_example
+and finally the =print= command prints the top value on
+the stack, which is 12.
+
+The files =sample*= in this directory give examples of other programs.
+The file =postfix.py= is for python3 and =postfix2.py= is for python2.
+Even if you are not a python programmer, you can try this profitably.
+Try running
+#+begin_src sh
+  python3 postfix.py sample1
+#+end_src
+for example (and similarly for =postfix2.py=).
+Use the versions in =Solutions/= to do this, as the
+other versions have some missing code.
+
+There are several tasks to try:
+
+ 1. Understand the structure of the code, even if some of the details
+    need to be skipped over. Can you tell what the parts are and
+    how this works?  How would you style and organize this code?
+ 2. Implement some simple commands like =add= and =mul=. There are commands
+    modeled in the code to show you how this works.
+    *All* of them involve stack manipulation.
+ 3. Explain why the command functions are organized as they are
+    and why they take the arguments they take.
+ 4. Implement some of the more complicated missing commands like =roll=
+    (which cyclically rotates the top of the stack).
+ 5. Finish implement =cmd_begin= for finishing the definition of
+    a procedure (user-defined command). The =Solutions/= directory
+    has a partial solution that you can look at if you are unclear
+    how to proceed.
+ 6. Write an interesting program, like Euclid's algorithm or Fibonnaci
+    numbes, in this programming language. The "postfix" stack based
+    syntax is tough but has a spartan beauty of its own, like a good
+    puzzle.
+
+Ask questions if you have them!
+
+
