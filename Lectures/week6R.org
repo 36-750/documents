@@ -1,0 +1,1114 @@
+#+TITLE: Graph Traversal \\
+#+TITLE: Statistics 650/750 \\
+#+TITLE: Week 6 Thursday
+#+DATE:  04 Oct 2018
+#+AUTHOR: Christopher Genovese and Alex Reinhart 
+
+* Graphs: The Basics
+
+  A *graph* is a structure that represents the relationships among a set
+  of entities. It consists of
+   
+  + A set of *nodes* (also called vertices) representing the entities.
+  + A set of *edges* each connecting two nodes.
+   
+  Two nodes connected by an edge are called /neighbors/, or adjacent.
+   
+  Graphs are enormously important in statistics, in computing, and more generally.
+  Many things can be treated as graphs:
+   
+  1. Social networks, where nodes are people and edges are relationships between
+     them
+  2. Statistical models, where nodes are variables and edges represent dependence,
+     causality, or correlation
+  3. Road maps, where nodes are intersections and buildings and edges represent
+     connections between them via road
+  4. Electric circuits, where nodes are circuit nodes and edges the resistors,
+     inductors, and capacitors connecting them
+  5. The Internet is a bunch of nodes (routers and individual computers) connected
+     by Ethernet, WiFi, ISPs, undersea cables...
+   
+  Treating something complicated, like a social network, as a graph lets us apply
+  a range of powerful tools to work with it. By learning generally about graphs,
+  we learn tools that can be used for many different kinds of problems.
+   
+  Rather than remembering the details of various graph /algorithms/, it is useful to
+  think about common graph /problems/ and how they apply to your situation. Finding
+  good algorithms then follows fairly easily.
+   
+  Common graph problems:
+   
+    + Finding connected components
+    + Finding shortest paths
+    + Matching and coloring
+    + Transitive closure
+    + Finding a minimal spanning tree
+    + Traversing the graph
+    + Topological sorting
+    + Finding separating edges and nodes
+    + Finding cycles and "tours"
+    + Maximizing flows through a network
+    + Calculating useful embeddings.
+   
+  But first, let's learn about graphs.
+
+** Graphs as Mathematical Objects
+
+   Mathematically, a graph $G = (N, E)$, where $N$ is a /set/ of nodes and $E$ is a
+   set of edges. Nodes are represented by distinct objects that act as *node ids*.
+   The representation of edges depends on whether the graph is *directed* (edges
+   have a direction to them) or *undirected* (they do not).
+
+   [[file:../Figures/graph-example.png]]
+
+   [[file:../Figures/graph-complex.png]]
+
+
+   In an *undirected* graph, we represent edges mathematically by 
+   2-sets of the form $\{n_1, n_2\}$, where $n_1$ and $n_2$ are nodes in $N$.
+   We use /sets/ here because the order of the nodes does not matter;
+   $\{n_2, n_1\}$ represents the same edge as $\{n_1, n_2\}$.
+
+   In a *directed* graph, we represent edges mathematically by
+   2-tuples of the form $(n_1,n_2)$, where again $n_1, n_2\in N$.
+   A tuple implies an order: the edge goes /from/ $n_1$ /to/ $n_2$.
+
+   A few relevant terms:
+   + Two nodes are *adjacent*, or equivalently *neighbors*, if an edge connects them.
+     (In a directed graph, the /to/ node is a neighbor of the /from/ node.)
+   + Two nodes are *connected* if there is a path from one to the
+     other, i.e., a series of steps via adjacent nodes.  
+   + A *cycle* is a non-trivial path from a node back to itself. A graph
+     without cycles is called *acyclic*.
+   + A *simple* graph has no edge from a node to itself and at most
+     one edge between any pair of nodes.
+
+   See the [[*Appendix: Flavors of Graphs][appendix]] on Flavors of Graphs for some more detail.
+
+** Graphs as Computational Objects
+
+   For computation, graphs can contain a bit more information.
+   In particular, we allow both the nodes and edges to have other
+   associated properties or attributes -- essentially, data that is
+   attached to the object. During algorithms, we often inspect or
+   collect these attributes.
+
+
+   Graphs as objects have several common methods in their interface,
+   including:
+   + ~size()~ :: the number of nodes
+   + ~nodes()~ :: the set of nodes
+   + ~edges()~ :: the set of edges
+   + ~edges(nid)~ :: the set of edges containing node =nid=
+   + ~neighbors(nid)~ :: neighbors of node =nid=
+   + ~neighbors(nid1, nid2)~ :: are nodes =nid1= and =nid2= adjacent?
+   + ~add_node(...)~ :: add a new node, return new node id
+   + ~remove_node(nid)~ :: remove node =nid=
+
+   In addition, either implicitly or explicitly, Nodes and Edges
+   can be objects with an interface to access their properties
+   and consituents:
+   + ~id()~ :: identifier for a node or edge
+   + ~attributes()~ :: dictionary of attributes for a node or edge
+   + ~attribute(key)~ :: value of attribute =key=
+   + ~attribute(key, value)~ :: set attribute =key= to =value=
+   + ~edges()~ :: set of edges incident on a node (nodes only)
+   + ~nodes()~ :: set of nodes that make up the edge (edges only)
+
+   Other possible behaviors can also be usefully defined.
+
+   See the [[*Appendix: Representing Graphs][appendix]] on Representing Graphs for some more detail.
+
+* Traversal
+
+  To *traverse* a graph is to visit every node and/or edge systematically.
+
+  This seems boring, but it's actually an important part of many things
+  we want to do with graphs: finding connected components, finding paths
+  between nodes, calculating graph statistics, and much more. Even
+  "finding paths between nodes" is useful for an incredible number of
+  problems, from Google Maps to internet routing, and even tasks as
+  plainly statistical as kernel density estimation can be phrased in
+  terms of traversals of graphs (or trees).
+
+  There are several strategies for traversing a graph, each with
+  different useful properties.
+
+  Start with an undirected, simple graph.
+
+  Q: If I showed you a large, undirected, simple graph and asked you to count
+  the nodes exactly, how would you do it?
+
+  #+begin_example
+    Keep careful track of which nodes and edges remain to be visited,
+    which of those visited have incident nodes/edges left to consider,
+    and which have been fully processed.
+  #+end_example
+
+** Strategies
+
+   A traversal strategy produces a sequence of nodes and edges, with each
+   node and edge listed exactly once. There are two, very commonly used
+   strategies and one general strategy:
+
+   + *Breadth-First Search* (BFS) :: visit all neighbors of the current node
+        before visiting any of /their/ neighbors.
+   + *Depth-First Search* (DFS) :: visit all neighbors of the next visited node
+        before visiting the other neighbors of the /current/ node.
+   + *Priority Search* :: visit nodes in priority order, adding neighbors at each stage
+
+   These strategies differ in how the sequence of nodes is handled.
+
+** Traversal States
+
+   During traversal, we will assign nodes three possible states:
+
+     + =fresh= :: the node has not yet been considered or processed
+     + =visited= :: the node has been found, but some of its neighbors'
+                  remain fresh.
+     + =processed= :: the node has been visited and all its neighboring
+                    nodes have as well.
+
+   Because the state of an edge can be inferred from its surrounding
+   nodes, it is usually sufficient to keep track of the node states.
+
+   We will maintain a *traversal state* object that contains the current
+   state of all nodes and a record of the history of traversal,
+   including from what node was each node visited, the "times" at
+   which each node is visited and processed, and an indicator (which we
+   can set) of whether the search should stop.
+
+   As part of this state, we will also track an arbitrary *accumulator*
+   object, which we will use to store any data or results that
+   we accumulate over the course of the traversal.
+
+** Traversal Power-Ups
+
+   To make the traversal flexible, we will pass three /processing
+   functions/ to the algorithms:
+
+   + =before_node= :: called on fresh nodes when they are visited
+   + =after_node=  :: called on visited nodes when they are processed
+   + =on_edge=     :: called on edge when first traversed
+
+   These will be able to access the current node or edge as well as the
+   current traversal state. By specifying difference choices of
+   these functions, we can make our graph traversal algorithm perform
+   many different tasks.
+
+** Aside: Stacks, Queues, and Priority Queues
+
+   A brief refresher from our discussion of data structures.
+
+*** Stack
+
+    A *stack* is a data structure for processing objects in a
+    /Last In-First Out/ manner. The most recent object added is said to be
+    at the "top" of the stack.
+
+    Stacks support two primary (and one optional) operations:
+
+      + =push(obj)= :: add object to the top of the stack
+      + =pop()=     :: remove the object from the top of the stack and return it
+      + =peek()=    :: return the object from the top of the stack without
+                     removing it
+
+    It is an error to pop an empty stack.
+
+*** Queue
+
+    A *queue* is a data structure for processing objects in a /First In-First Out/ manner.
+    The most recent object added is said to be at the "back" of the queue;
+    the next object to be processed is said to be at the "front" of the queue.
+
+    Queues support three primary operations:
+
+      + enqueue(obj) :: add object to the back of the queue
+      + dequeue()    :: remove the object at the front of the queue and return it
+      + is_empty()   :: do any objects remain in the queue?
+
+    It is an error to dequeue and empty queue.  (Don't confuse dequeue with deque,
+    a different but related data structure.) Sometimes the =front()= operation
+    is provided, which like =peek()=, looks at the front object without removing it
+
+*** Priority Queue
+    A *priority queue* is a data structure for processing objects
+    in a specialized order determined by priorities attached
+    to the objects. Objects are processed from highest to lowest
+    priority. A priority queue generalizes stacks and queues.
+    A priority queue with priorities increasing as objects
+    are added gives a stack; a priority queue with priorities
+    decreasing as objects are added gives a queue.
+
+    Priority queues support three primary operations:
+
+      + extract_highest() :: remove the object of highest priority and return it
+      + insert(obj, p)    :: add object with specified priority p
+      + is_empty()        :: do any objects remain in the queue?
+      + peek_highest()    :: examine but do not remove highest priority object
+
+** A Traversal Template
+
+   #+begin_src python
+     from TraversalState import TraversalState
+     from PriorityQueue import PriorityQueue
+
+
+     def noop(graph, node, state):
+         pass
+
+
+     def priority(time):
+         pass  # e.g., return time  or return -time
+
+
+     def traverse(graph, start, acc, before_node=noop, after_node=noop,
+                  on_edge=noop, state=None):
+         if state is None:
+             state = TraversalState(graph.nodes(), acc)
+
+         time = 0
+         remaining_nodes = PriorityQueue()
+         remaining_nodes.insert(start, priority(time))
+
+         while not remaining_nodes.is_empty() and not state.finished:
+             current_node = remaining_nodes.peek_highest()
+
+             if state.fresh(current_node):
+                 state.visit(current_node, time)
+                 before_node(graph, current_node, state)
+
+                 for neighbor in graph.neighbors(current_node):
+                     if state.fresh(neighbor):
+                         time += 1
+                         remaining_nodes.insert(neighbor, priority(time))
+             elif state.visited(current_node):
+                 time += 1
+                 state.process(current_node, time)
+                 after_node(graph, current_node, state)
+                 remaining_nodes.extract_highest()
+             else:  # PROCESSED
+                 remaining_nodes.extract_highest()
+
+         return state
+   #+end_src
+
+** Breadth-First Search (BFS)
+
+   We will maintain a *queue* of nodes, initialized with the start node.
+   We successively dequeue a node and process it and enqueue all
+   of that nodes fresh neighbors (processing all the edges along the
+   way).
+
+   Inputs:
+
+   + =graph=       :: an undirected graph
+   + =start=       :: a node at which to start the search
+   + =acc=         :: an accumulator object of arbitrary type
+   + =before_node= :: a function(node,ts) called when a node is =VISITED=
+   + =after_node=  :: a function(node,ts) called when a node is =PROCESSED=
+   + =on_edge=     :: a function(from,to,ts) called when an edge is traversed
+   + =ts=          :: a traversal state object (newly initialized if =None=)
+
+   Output:
+
+   + An updated traversal state =ts'=
+
+   The algorithm:
+
+   #+begin_example
+     function bfs(graph, start, acc, before_node=None, after_node=None,
+                  on_edge=None, ts=None):
+
+       Initialize traversal state ts if not supplied
+       Create a new empty queue
+
+       enqueue(start)
+       mark start visited
+       process start with before_node [if supplied]
+
+       while queue is not empty:
+          current_node = dequeue queue
+
+          for neighbors of current_node:
+              if neighbor is not processed:
+                  process edge (current_node, neighbor) with on_edge [if supplied]
+
+              if neighbor is fresh:
+                  enqueue neighbor
+                  mark neighbor visited
+                  set parent[neighbor] = current_node in ts
+                  process neighbor with before_node [if supplied]
+
+          mark current_node processed
+          process current_node with after_node [if supplied]
+   #+end_example
+
+   Assume we also have a functions =bfs_all= that calls =bfs=
+   on successive fresh nodes, updating the same traversal
+   state and returning it.
+
+   #+begin_src python
+     def bfs_all(graph, acc, before_node=None, after_node=None, on_edge=None):
+         ts = None
+
+         for node in graph.nodes():
+             if ts is None or ts.fresh(node):
+                 ts = self.bfs(node, acc, before_node, after_node, on_edge, ts)
+
+         return ts
+   #+end_src
+
+   Questions? Discussion...
+
+   What do the parent pointers do here?
+
+   #+begin_example
+   The node from which node i was visited is assigned to parent[i].
+   These pointers traces the visitation paths of the algorithm.
+   #+end_example
+
+*** Examples of using BFS
+
+    1. You have a function
+
+       #+begin_src python
+         def inc(graph, node, ts):
+             ts.accumulator += 1
+       #+end_src
+
+       and call ~tstate = bfs(start, 0, inc)~.
+       What is =tstate.accumulator= after the call?
+
+       When the traversal starts the accumulator is 0.
+       Each time a node is visited, this accumulator
+       is incremented. Hence, this counts the
+       nodes in the graph.
+
+    2. You have a function
+
+       #+begin_src python
+         def inc_if_blue(graph, node, ts):
+             props = graph.get_node_properties(node)
+             if  props['color'] == 'blue':
+                 ts.accumulator += 1
+       #+end_src
+
+       and call ~tstate = bfs(start, 0, inc_if_blue)~.
+       What is =tstate.accumulator= after the call?
+
+       As before, we are incrementing the accumulator
+       when we visit nodes, but this time only
+       for blue nodes. Hence, we are counting
+       the number of blue nodes.
+
+    3. You have a function
+
+       #+begin_src python
+         def parents(graph, node, ts):
+             parent = ts.parent[node]
+             my_name = graph.get_node_properties(node, 'label')
+             if parent:
+                 p_name = graph.get_node_properties(parent, 'label')
+             else:
+                 p_name = None
+             ts.accumulator[my_name] = p_name
+       #+end_src
+
+       and call ~tstate = bfs(start, {}, inc_if_blue)~.
+       What is =tstate.accumulator= after the call?
+
+       Here, we pass in an empty dictionary and record
+       for each node, its label and the label of its
+       "parent" -- the node we came from during BFS.
+       The accumulator thus contains a dictionary
+       mapping node labels to parent labels.
+
+    4. Find a path between nodes in the graph:
+       
+       #+begin_src python
+         def find_path(from_node, to_node, parents):
+             path = []
+             end = to_node
+             while from_node != end and end is not None:
+                 path.append(end)
+                 end = parents[end]
+             if end is not None:
+                 path.append(from_node)
+                 path.reverse()
+                 return path
+             else:
+                 return None
+
+         # ts = bfs(...)
+         # find_path(0, 3, ts.parent)
+       #+end_src
+
+       What kind of path does BFS find?
+
+*** Exercises
+
+    1. You have a function
+
+       #+begin_src python
+         def blue_labels(graph, node, ts):
+             props = graph.get_node_properties(node)
+             if  props['color'] == 'blue':
+                 ts.accumulator.append(props['label'])
+       #+end_src
+
+       and call ~tstate = bfs(start, [], before_node=blue_labels)~.
+       What is =tstate.accumulator= after the call?
+
+    2. Write a function ~find_path(parents, start, end)~ that takes the
+       BFS tree (through the parent pointers) and returns a list
+       of node IDs giving a path from =start= to =end=, or =None= if there
+       is no such path.
+
+    3. Configure BFS to find the *connected components* of a graph,
+       these are the sets of nodes such that within each set
+       there is a path between any two nodes.
+
+       #+begin_src python
+         def collect_visited(graph, node, state):
+             """Accumulates list of nodes as they are visited."""
+             state.accumulator.append(node)
+
+         def grab_component(graph, components, start, state=None):
+             """Collect one connected component and reset state accumulator."""
+
+             state = graph.bfs(start, [], before_node=collect_visited, ts=state)
+             components.append(state.accumulator)
+             state.accumulator = []
+
+             return state
+
+         def connected_components(g):
+             """Returns a list of connected components for a graph g"""
+
+             components = []
+             ts = None
+
+             for node in g.nodes():
+                 if ts.fresh(node):
+                     ts = grab_component(g, components, node, state=ts)
+
+             return components
+       #+end_src
+
+    4. Configure BFS to determine if the graph can be /two-colored/,
+       meaning that we can assign one of two colors to every node
+       without two nodes of the same color sharing an edge between
+       them. A two-colorable graph is said to be *bipartite*.
+       Find the two coloring or return None/null/NA if the graph
+       is not bipartite.
+
+       #+begin_src python
+         def complementary_color(color):
+             return 1 - color
+
+         def check_edge(graph, node, neighbor, state):
+             node_color = graph.get_node_properties(node, "color")
+             nghb_color = graph.get_node_properties(neighbor, "color")
+
+             if node_color == nghb_color:
+                 ts.accumulator = False  # Bipartite indicator
+                 ts.finished = True
+
+             graph.update_node_properties(neighbor,
+                                          color=complementary_color(node_color))
+
+         def two_coloring(g):
+             """Returns a two-coloring of a graph g if bipartite, else False."""
+
+             ts = None
+
+             for node in self.nodes():
+                 if ts is None or ts.fresh(node):
+                     g.update_node_properties(node, color=0)
+                     ts = self.bfs(node, True, on_edge=check_edge, ts=ts)
+
+                 if ts.finished:
+                     break
+
+             if ts.accumulator:
+                 return [(node, g.get_node_properties(node, "color")) for node in g.nodes()]
+             else:
+                 return False
+       #+end_src
+
+** Depth First Search (DFS)
+
+   In contrast to BFS, in DFS we will maintain a *stack* of nodes,
+   initialized with the start node.
+
+   We successively pop a node and process it and push all of that node's fresh
+   neighbors (processing all the edges along the way). There is a recursive
+   logic to DFS: for each fresh neighbor, call DFS on it (maintaining state).
+
+   #+begin_example
+   DFS(start):
+     for neighbor in neighbors(start):
+        if neighbor is FRESH:
+           DFS(neighbor)
+   #+end_example
+
+   Wait, where's the stack?
+
+   For our algorithm, we take the inputs:
+
+   + =graph=      :: an undirected graph
+   + =start=       :: a node at which to start the search
+   + =acc=         :: an accumulator object of arbitrary type
+   + =before_node= :: a function(node,ts) called when a node is VISITED
+   + =after_node=  :: a function(node,ts) called when a node is PROCESSED
+   + =on_edge=     :: a function(from,to,ts) called when an edge is traversed
+   + =ts=          :: a traversal state object (newly initialized if None)
+
+   We output an updated traversal state =ts'=.
+
+   #+begin_example
+     function dfs(graph, start, acc, before_node=None, after_node=None,
+                  on_edge=None, ts=None):
+
+       tick the clock
+       state[node] = VISITED
+       visited_time[node] = time
+
+       do before_node processing of node [if supplied]
+
+       for each neighbor of node:
+           do on_edge processing of edge(node <-> neighbor) [if supplied]
+
+           if state[neighbor] is FRESH:
+               parent[neighbor] = node
+               dfs(graph, neighbor, acc, before_node, after_node, on_edge, ts)
+
+       state[node] = PROCESSED
+       tick the clock
+       processed_time[node] = time
+
+       do after_node processing of node [if supplied]
+   #+end_example
+
+   Alternately, we can explicitly use a stack, looping until the stack is empty:
+
+   #+begin_example
+     function dfs(graph, start, acc, before_node=None, after_node=None,
+                  on_edge=None, ts=None):
+       time = 0
+       stack is empty
+
+       if ts is None initialize traversal state:
+           state of all nodes = FRESH
+           parent[start] = None
+           accumulator = acc
+           finished = False
+       else:
+           use ts as traversal state
+
+       push (start, True) onto stack
+
+       while stack is not empty and not finished:
+           peek at (current, is_node?) on top of stack
+
+           if is_node? is False:
+               do on_edge processing of current edge (if specified)
+               pop the stack
+           else if state[current] is FRESH:
+               tick the clock
+               state[current] = VISITED
+
+               do before_node processing of current(if specified)
+
+               for each neighbor of current:
+                   if neighbor is FRESH:
+                       parent[neighbor] = current
+                       push (neighbor, True) on stack
+                       push (edge[current<->neighbor], False) on stack
+
+           else if state[current] is VISITED:
+               tick the clock
+               state[current] = PROCESSED
+               do after_node processing of current (if specified)
+               pop the stack
+           else:
+               pop the stack
+
+       return traversal state
+   #+end_example
+
+   Again, suppose we have =dfs_all= which continues searching until no fresh nodes
+   are found:
+
+   #+begin_src python
+     def dfs_all(self, acc, before_node, after_node, on_edge):
+         ts = None
+
+         for node in self.nodes():
+             if ts is None or ts.fresh(node):
+                 ts = self.dfs(node, acc, before_node, after_node, on_edge, ts)
+
+         return ts
+   #+end_src
+
+*** Example Configuring DFS
+
+    1. _Task_: Print traversal history as DFS runs
+
+       _Basic idea_: Mark each node as it is being visited
+       and processed, and mark each edge as it is being
+       traversed. Here, we will use node labels to keep
+       track.
+
+       _Solution_: See [[file:R-src/print-history.py][print-history.py]] for the solution.
+
+    2. _Task_: Detect cycles in a graph with DFS.
+
+       _Basic Idea_: In an undirected graph, if there
+       are no back edges, we have a tree -- hence,
+       no cycles. But any back edge creates a cycle.
+       So, look for back edges.
+
+       #+begin_src python
+         def detect_back_edge(g, from_node, to_node, ts):
+             if ts.visited(to_node) and ts.parent[from_node] != to_node:
+                 # Found back edge
+                 from_label = gr.get_node_properties(from_node, 'label')
+                 to_label = gr.get_node_properties(to_node, 'label')
+
+                 print("Found cycle with nodes {from_n}"
+                       "and {to_n}".format(from_n=from_label, to_n=to_label))
+
+                 ts.finished = True
+       #+end_src
+
+       Pass this as the =on_edge= argument.
+
+*** DAGs and Topological Sort
+
+    A *topological sort* of a DAG is a linear ordering of the DAG's nodes
+    such that if $(u,v)$ is a directed edge in the graph, node $u$ comes
+    before node $v$ in the ordering.
+
+    Given a DAG, how do we use DFS to do a topological sort?
+
+    Algorithm =topological-sort=:
+
+    #+begin_example
+    Input: A DAG G
+    Output: A list of nodes representing a topological sort
+
+    Steps: Run DFS on G, configured with after_node so that
+    after each node is processed, we push it onto the front
+    of a linked list (or equivalently onto a stack).
+
+    Return the list of nodes.
+    #+end_example
+
+*** Other Applications and Exercises
+
+    1. Configure =dfs= to count the number of "descendants" of a node.
+    2. Configure =dfs= to compute a path between two nodes.
+
+*** Application: Directed Graphs and Strongly Connected Components
+
+    A directed graph is strongly connected if there is a /directed/ path
+    between any two nodes.
+
+    The strongly connected components of a directed graph are its
+    maximal, strongly connected subgraphs.
+
+    We can find the strongly connected components with two DFS's.
+    For an arbitrary node /v/, the graph is strongly connected if
+    we can find a directed path from /v/ to any other node /u/ *and*
+    a directed path from any node /w/ to /v/.
+
+    Let G be a directed graph and let G' have the same nodes
+    and edges with all the edges /reversed/. Pick an arbitrary
+    node /v/.
+
+    The algorithm for /detecting/ strong connectivity is
+    basically as follows:
+
+    1. Do =DFS(G, v)=.
+    2. If the traversal does not contain all nodes, then
+       there are nodes we cannot reach from /v/.
+       Hence, G cannot be strongly connected.
+    3. Do =DFS(G', v)=.
+    4. If this traversal does not contain all nodes, then
+       there are nodes in G from which we cannot reach /v/.
+       Hence, G cannot be strongly connected.
+
+    To find the strongly connected components, we
+    just do a little processing.
+
+    In step 1, record the =processed_times=.
+    In step 3, do =DFS_ALL(G')= with the nodes
+    ordered as the reversal of the =processing_times=.
+
+** Priority Search
+
+   Priority search operates just like BFS and DFS,
+   the only difference is that each time we visit
+   a node, we add its neighbors to the queue
+   with associated priorities
+
+   Exercise: How do we modify BFS/DFS to get priority search?
+
+* Appendix: Flavors of Graphs
+
+  Mathematically, a graph $G = (N, E)$, where $N$ is a /set/ of nodes and $E$ is a
+  set containing 2-sets of the form $\{n_1, n_2\}$, that represents an edge
+  between nodes $n_1$ and $n_2$. (They are 2-sets because they are not ordered:
+  $\{n_2, n_1\}$ represents the same edge as $\{n_1, n_2\}$.)
+
+  A graph is *connected* if one can move between any two nodes by a series of
+  steps between adjacent nodes. That is, any node is a neighbor of a neighbor of
+  a neighbor of a... of any other node.
+
+  Graphs are often shown, er, graphically with the nodes as circles (or
+  other shapes) and the edges as lines or curves linking the nodes.
+
+  #+BEGIN_SRC latex :file ../Figures/graph-example.png :packages '(("" "tikz")) :border 1em :results raw
+    \begin{tikzpicture}[all/.style={draw,thick,circle,minimum size=0.75cm}]
+      \node (A) at (2,4)   [all] {};
+      \node (C) at (2,1)   [all] {};
+      \node (B) at (4.5,4) [all] {};
+      \node (D) at (4.5,1) [all] {};
+      \node (E) at (0,2.5) [all] {};
+      \node (F) at (8,2.5) [all] {};
+      \node (G) at (6.5,1) [all] {};
+      \node (H) at (6.5,4) [all] {};
+      \draw (C) -- (D);
+      \draw (A) -- (C);
+      \draw (A) -- (E);
+      \draw (A) -- (B);
+      \draw (C) -- (E);
+      \draw (B) -- (D);
+      \draw (F) -- (G);
+    \end{tikzpicture}
+  #+END_SRC
+
+  #+RESULTS:
+  [[file:../Figures/graph-example.png]]
+
+  A graph can be basic, like a single node with no edges, or complex, like:
+
+  #+BEGIN_SRC latex :file ../Figures/graph-complex.png :packages '(("" "tikz")) :border 1em :results raw
+    \begin{tikzpicture}[transform shape,scale=0.5,line width=0.2pt]
+      \foreach \x in {1,...,16}{%
+        \pgfmathparse{(\x-1)*45+floor(\x/9)*22.5}
+        \node[draw,circle,inner sep=0.25cm] (N-\x) at (\pgfmathresult:5.4cm) [thick] {};
+      }
+      \foreach \x [count=\xi from 1] in {2,...,16}{%
+        \foreach \y in {\x,...,16}{%
+            \path (N-\xi) edge[-] (N-\y);
+      }
+    }
+    \end{tikzpicture}
+  #+END_SRC
+
+  #+RESULTS:
+  [[file:../Figures/graph-complex.png]]
+
+** Properties (especially Labels and Weights)
+
+   While the nodes and edges define the relationships, we often want to
+   encode more information. To that end, we can associate properties
+   with the nodes and the edges. These properties can be arbitrary data
+   (or meta-data), but most common are *labels* and *weights*, which are
+   strings and numbers, respectively, associated with nodes and/or
+   edges.
+
+   Here is a graph with labeled nodes:
+
+   #+BEGIN_SRC latex :file ../Figures/graph-labeled.png :packages '(("" "tikz")) :border 1em :results raw
+     \begin{tikzpicture}[xscale=1.5,,scale=0.9,
+       all/.style={draw=none,text=white,minimum size=1.25cm,node font=\sffamily\bfseries},
+       eighth/.style={fill=blue,circle},
+       seventh/.style={fill=magenta,rectangle}]
+       \node (Nathan) at (5,2)  [all,eighth]  {Nathan};
+       \node (Sam)    at (0,4)  [all,eighth]  {Sam};
+       \node (Kai)    at (0,0)  [all,eighth]  {Kai};
+       \node (Joe)    at (5,0)  [all,seventh] {Joe};
+       \node (Sam)    at (0,4)  [all,eighth]  {Sam};
+       \node (Aidan)  at (4,4)  [all,eighth]  {Aidan};
+       \node (Jacob)  at (1.5,2)  [all,eighth]  {Jacob};
+       \node (Lucy)   at (8,4)  [all,eighth]  {Lucy};
+       \node (Grace)  at (8,2)  [all,seventh] {Grace};
+       \node (Elliot) at (8,0)  [all,seventh] {Elliot};
+       \draw (Nathan) -- (Sam);
+       \draw (Nathan) -- (Kai);
+       \draw (Kai) -- (Sam);
+       \draw (Nathan) -- (Jacob);
+       \draw (Nathan) -- (Aidan);
+       \draw (Nathan) -- (Lucy);
+       \draw (Nathan) -- (Elliot);
+       \draw (Lucy) -- (Aidan);
+       \draw (Lucy) -- (Grace);
+       \draw (Joe) -- (Grace);
+       \draw (Jacob) -- (Aidan);
+     \end{tikzpicture}
+   #+END_SRC
+
+   #+RESULTS:
+   [[file:../Figures/graph-labeled.png]]
+
+
+   Here is a graph with labeled nodes and weighted edges:
+
+   #+BEGIN_SRC latex :file ../Figures/graph-labeled-weighted.png :packages '(("" "tikz")) :border 1em :results raw
+     \begin{tikzpicture}[xscale=1.5,scale=0.9,
+       all/.style={draw=none,text=white,minimum size=1.25cm,node font=\sffamily\bfseries},
+       eighth/.style={fill=blue,circle},
+       seventh/.style={fill=magenta,rectangle}]
+       \node (Nathan) at (5,2)  [all,eighth]  {Nathan};
+       \node (Sam)    at (0,4)  [all,eighth]  {Sam};
+       \node (Kai)    at (0,0)  [all,eighth]  {Kai};
+       \node (Joe)    at (5,0)  [all,seventh] {Joe};
+       \node (Sam)    at (0,4)  [all,eighth]  {Sam};
+       \node (Aidan)  at (4,4)  [all,eighth]  {Aidan};
+       \node (Jacob)  at (1.5,2)  [all,eighth]  {Jacob};
+       \node (Lucy)   at (8,4)  [all,eighth]  {Lucy};
+       \node (Grace)  at (8,2)  [all,seventh] {Grace};
+       \node (Elliot) at (8,0)  [all,seventh] {Elliot};
+       \draw (Nathan) -- (Sam)     node [pos=0.6,above] {8};
+       \draw (Nathan) -- (Kai)     node [pos=0.5,below] {2};
+       \draw (Kai) -- (Sam)        node [pos=0.5,left]  {4};
+       \draw (Nathan) -- (Jacob)   node [pos=0.6,above] {5};
+       \draw (Nathan) -- (Aidan)   node [pos=0.4,left] {$2\;$};
+       \draw (Nathan) -- (Lucy)    node [pos=0.5,above] {5};
+       \draw (Nathan) -- (Elliot)  node [pos=0.3,above] {2};
+       \draw (Lucy) -- (Aidan)     node [pos=0.6,above] {2};
+       \draw (Lucy) -- (Grace)     node [pos=0.5,right] {1};
+       \draw (Joe) -- (Grace)      node [pos=0.3,below] {$\frac{1}{2}$};
+       \draw (Jacob) -- (Aidan)    node [pos=0.75,above] {2};
+     \end{tikzpicture}
+   #+END_SRC
+
+   #+RESULTS:
+   [[file:../Figures/graph-labeled-weighted.png]]
+
+   Weights might be used to represent many things: the strength of correlation
+   between variables, the distance between two points on the road network, or
+   the number of emails sent between two people, among many other potential
+   applications.
+
+** Directed versus Undirected Graphs
+
+   The graphs displayed above are *undirected*: the edges $\{n_1, n_2\}$
+   represent /symmetric/ relationships between the nodes. For example, Kai
+   is friends with Nathan if and only if Nathan is friends with Kai.
+
+   In contrast, a *directed* graph, or /digraph/, has edges with direction
+   that represent asymmetric relationships. For example, Joe might
+   "like" Grace without Grace liking Joe.
+
+   Mathematically, the edges in a digraph are not sets but tuples,
+   specifically ordered pairs $(n_1, n_2)$ representing an edge
+   /from/ node $n_1$ /to/ node $n_2$.
+
+   Graphically, we display directed edges as /arrows/:
+
+   #+BEGIN_SRC latex :file ../Figures/graph-directed.png :packages '(("" "tikz")) :border 1em :results raw
+     \begin{tikzpicture}[=>latex,->,shorten >=0.5pt,ultra thick]
+      \node[draw,circle,inner sep=0.25cm] (A) at (0,0) [thick] {};
+      \node[draw,circle,inner sep=0.25cm] (B) at (2,0) [thick] {};
+      \draw (A) -- (B);
+     \end{tikzpicture}
+   #+END_SRC
+
+   #+RESULTS:
+   [[file:../Figures/graph-directed.png]]
+
+** Simple versus Non-Simple
+
+   A /simple/ graph has
+
+     + no edges from a node to itself,
+     + at most one edge between any pair of nodes;
+
+   otherwise, the graph is /non-simple/.  The graphs above
+   were all simple; here's a non-simple example.
+
+   #+begin_src dot :cmd fdp :file ../Figures/ns-A.png :exports results
+     graph { A -- B; A -- C; B -- C; B -- C; B -- D; C -- D; D -- D; }
+   #+end_src
+   #+RESULTS:
+   [[file:../Figures/ns-A.png]]
+
+   Most graphs we work with are simple graphs.
+
+** Sparse versus Dense
+
+   A graph is /sparse/ if only a small fraction of the possible edges are
+   present; otherwise it is /dense/. Which of the examples above are
+   sparse? Which are dense?
+
+   Later we'll see that the difference between a sparse and a dense graph has
+   implications for how we choose to represent a graph in our programs.
+
+   Consider a large social network, like Facebook, where edges represent
+   "friendship" between two members. Is such a graph sparse or dense?
+
+** Cyclic versus Acyclic
+
+   A *cycle* in a digraph is a sequence of adjacent nodes (a path,
+   respecting direction) that begin and end with the same node.
+   (There are several different flavors of cycle.)
+
+   An *acyclic graph* has no cycles (else it is /cyclic/). A directed,
+   acyclic graph is called a *DAG*.
+
+   One of the most important types of acyclic graph is a *tree*.
+
+   A graph G is a tree if any of the following (equivalent)
+   properties hold:
+
+    + G is connected, acyclic graph.
+    + G is connected but deleting any edge makes it disconnected.
+    + Any two distinct nodes in G are connected by exactly one
+      /simple path/ (a path containing distinct nodes only).
+    + A finite G with $n$ nodes is a tree if
+      it is acyclic and has $n - 1$ edges.
+    + A finite G with $n$ nodes is a tree if
+      it is connected and has $n - 1$ edges.
+
+   There are many varieties of tree. Here's a binary tree, for example, where
+   each node has only two children:
+
+   [[file:../Figures/binary-search-tree.png]]
+
+* Appendix: Representing Graphs
+
+  There are several common data structures used to represent graphs. For
+  a graph $G$, let $n = \#N$ and $e = \#E$ denote the total number of
+  nodes and edges.
+
+  When we talked about data structures, we made a distinction between the
+  /abstract operations/ a data structure supports and the actual implementation,
+  in code and in memory, of the data structure. The same applies here: a graph
+  is an abstract idea, and there are a few operations we want it to support:
+
+  - Check if there is an edge between two nodes
+  - Add and remove nodes
+  - Add and remove edges between nodes
+  - Traverse the graph
+
+  Let's discuss a few common implementations, which have different tradeoffs in
+  computational complexity and storage costs.
+
+** Adjacency Matrix
+
+   An $n \times n$ matrix where an entry at row $i$ and column $j$ indicates
+   whether there is an edge connecting $i$ and $j$. In digraphs, rows represent
+   source nodes and columns represent destination nodes. In undirected graphs,
+   adjacency matrices are symmetric.
+
+   Adjaceny matrices make it easy to look up whether an edge exists. They
+   are useful for dense, simple graphs. Properties must be stored
+   elsewhere.
+
+   |   | A | B | C | D | E | F | G |
+   |---+---+---+---+---+---+---+---|
+   | A | 0 | 1 | 1 | 0 | 0 | 0 | 0 |
+   | B | 1 | 0 | 0 | 1 | 1 | 0 | 0 |
+   | C | 1 | 0 | 0 | 0 | 0 | 1 | 1 |
+   | D | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+   | E | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+   | F | 0 | 0 | 1 | 0 | 0 | 0 | 0 |
+   | G | 0 | 0 | 1 | 0 | 0 | 0 | 0 |
+   |---+---+---+---+---+---+---+---|
+
+   In graphs with weighted edges, the adjacency matrix often stores the
+   weights on each edge instead of 1. Instead of 0 for no-edge, it is
+   sometimes convenient to use $\infty$.
+
+** Adjacency List
+
+   For each node, we store a list of the node's neighbors:
+
+   | A | B         |
+   | B | A C U     |
+   | C | B U E F G |
+   | U | B C       |
+   | E | C F       |
+   | F | C E G     |
+   | G | C F       |
+
+   We can allow self links and multi-links (via repeats in the list).
+   We can also store data (or a pointer to it) in the list.
+
+** Incidence Matrix
+
+   An $n \times e$ boolean matrix, where rows represent nodes and
+   columns represent edges, and where the $i,j$th element being
+   true means that node $i$ is "incident on" edge $j$.
+
+** Operations and Performance
+
+   | Operation        | Adjacency Matrix | Adjacency List | Incidence Matrix | Winner           |
+   |------------------+------------------+----------------+------------------+------------------|
+   | u, v adjacent?   | O(1)             | O(n)           | O(e)             | Adjacency Matrix |
+   | degree(u)        | O(n)             | O(neighbors)   | O(e)             | Adjacency List   |
+   | insert node      | O(n^2)           | O(1)           | O(n e)           | Adjacency List   |
+   | insert edge      | O(1)             | O(neighbors)   | O(n e)           | Adjacency List   |
+   | delete node      | O(n^2)           | O(e)           | O(n e)           | depends          |
+   | delete edge      | O(1)             | O(e)           | O(n e)           | Adjacency Matrix |
+   | memory (small G) | O(n^2)           | O(n + e)       | O(n e)           | Adjacency List   |
+   | memory (big G)   | O(n^2)           | O(n + e)       | O(n e)           | Adjacency Matrix |
+   | traversal        | Theta(n + e)     | Theta(n^2)     |                  | Adjacency List   |
+   |------------------+------------------+----------------+------------------+------------------|
+
+   Adjacency lists are a good default, but pay attention to the problem at hand.
+
+** Group Exercise
+
+   Design two data structures/classes that represent an undirected graph
+   in the Adjacency Matrix and List representation, respectively.
+
+   You can assume the nodes are identified by numbers from 1..n or 0..(n-1),
+   whichever is more convenient.
+
+   Write functions to translate between the two representations.
+
+   (For later) Choose one of the operations above in the table and implement it.
+
+   Ideas?
+
+   #+begin_src R
+     adj_matrix_to_adj_list <- function(A) {
+         n <- nrow(A)
+         adj_list <- vector("list", n)
+
+         for ( i in 1:n ) {
+             adj_list[[i]] <- which(A[i,] == 1)
+         }
+
+     ### OR
+
+         adj_list <- lapply(1:n, function(i) { which(A[i,] == 1) })
+
+         return( adj_list )
+     }
+   #+end_src
+
+* Extras                                                                                          :noexport:ARCHIVE:
+
+#+OPTIONS: H:3 num:nil toc:nil
+#+LATEX_HEADER: \usepackage[margin=0.75in]{geometry}
+
+# Local Variables:
+# org-latex-packages-alist: (("" "tikz" t) ("" "tabu" nil) ("" "minted" nil))
+# org-latex-minted-options:(("mathescape" "") ("linenos" "") ("numbersep" "5pt") ("gobble" "0") ("frame" "lines") ("framesep" "2mm"))
+# org-latex-listings: minted
+# org-latex-default-table-environment: tabu
+# org-latex-create-formula-image-program: imagemagick
+# org-latex-pdf-process: ("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f" "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f" "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f")
+# org-image-actual-width: nil
+# org-hide-emphasis-markers: t
+# org-export-filter-strike-through-functions: (my/latex-strike-through-filter)
+# End:
+
+
