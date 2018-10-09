@@ -1,0 +1,1196 @@
+* Goals for Today
+
+  + Describe the core concepts of functional programming (FP)
+  + Show you some of the mechanics of using FP
+  + Argue for the value of "immutability" and "pure functions"
+  + Give you a taste of what "thinking functionally" means
+  + Pointing you toward FP resources in R and other languages
+
+  What takes longer than one class: the "aha" moment.
+
+  Key point:
+
+  *Whatever language you use, using the ideas and methods of FP will make you a
+  better programmer.*
+
+* Review and Contrast with OOP
+
+  A fundamental part of developing software is *building effective
+  abstractions* to model and organize the functionality the code
+  provides.
+
+  Previously, we looked at object-oriented programming (OOP), which models
+  problems with a collection of inter-related /objects/ that have designated
+  /behaviors/ and which manage their own /internal state/.
+
+  The core features of OOP are:
+
+   + Encapsulation  :: keeping things on a "need to know" basis
+   + Polymorphism   :: interchangeability of objects based on interface
+   + Inheritance and Composition :: building new classes that can be used
+        interchangeably with others
+   + Delegation of Responsibilities :: each class handles its own sphere of concerns
+
+  In OOP, *the class is the fundamental unit of abstraction*.
+
+  Why OOP?
+
+    + Modularity
+    + Separation of Concerns
+    + Ease of modification where interface is shared
+    + Ease of testing (maybe)
+    + Can be easy to reason about
+
+  Issues:
+
+    + Overhead, boilerplate, verbosity
+    + Emergent complexity -- many classes, complex relationships
+    + In practice, not as modular or reusable as hoped
+    + Parallelism/Concurrency is very hard
+    + Fundamentally prioritizes nouns over verbs. Why?
+    + Can be hard to reason about
+
+
+  Today, we consider another programming paradigm called
+  *Functional programming (FP)* that emphasizes /verbs/ over nouns.
+
+  Functional design focuses on building and /combining/ the basic parts of a
+  computation, so simple abstract ideas can be /composed/ to build many things.
+
+  Notes:
+
+  1. OOP was the clearly dominant paradigm of the 1990s and 2000s
+     and remains entrenched, but FP has been enjoying a striking
+     renaissance this decade.
+
+  2. FP and OOP are not in strictly in opposition; they can usefully
+     coexist. But they do lead to different ways of thinking about
+     computation.
+
+  3. For reference, there are many common programming paradigms. These
+     include: procedural, object-oriented, functional, logic,
+     event-driven, aspect oriented, and automata-based. Procedural and
+     object-oriented are /imperative/ -- giving a sequence of
+     computational steps that mutate the state of the program -- while
+     functional and logic programming (and some database query
+     languages) are /declarative/ -- expressing the intent of the program
+     without necessarily specifying the control flow. (Aspect-oriented
+     is a bit odd.)
+
+* The Core Concepts of Functional Programming (FP)
+
+  In /functional programming/ (FP), *functions are the fundamental unit of abstraction*.
+
+  #+begin_quote
+   It is better to have 100 functions operate on one data structure than
+   10 functions on 10 data structures.
+
+      -- Alan Perlis
+  #+end_quote
+
+  Functions return values, and functions /are/ values -- they can be passed to
+  other functions, manipulated, and stored. Functional programming thinks of
+  code as a way of transforming values to produce new values, not as a series of
+  commands:
+
+  #+begin_quote
+  Functional programming is a style of programming that emphasizes
+  the evaluation of expressions rather than the execution of commands.
+
+      -- comp.lang.functional FAQ
+  #+end_quote
+
+  Why use functional programming?
+
+  + Functions are simple, easily composed abstractions
+  + Easy to express many ideas with very little code
+  + Easier to reason about (and thus check) a program
+  + Effective Concurrency and Parallelism
+  + Declarative structure; focus on data flow
+  + Avoid the complexity of mutating state
+  + Efficiently exploit recursive thinking
+
+
+  There are many programming languages designed from the beginning for
+  functional programming, like Clojure, OCaml, Haskell, Scala, and Elm. Others
+  use many functional programming ideas, including R, Lisp, Julia, Ruby, and
+  JavaScript. (Python does so only begrudgingly.) Even old stodgy languages like
+  C++ and Java have recently added functional programming features.
+
+** First-Class Functions
+
+   In functional programming, *functions are first-class entities*.
+
+   An entity is "first class" if it can be:
+
+   + created on demand,
+   + stored in a variable or data structure,
+   + passed as arguments to functions, and
+   + returned as values from functions.
+
+   For instance, integers are first-class entities:
+
+   + Create:  ~14~
+   + Store:   ~i = 7~
+   + Pass:    ~max(7, 14)~
+   + Return:  ~return(i + 2)~
+
+   Integers are "data."
+
+   Having first-class functions means that /functions are data too/.
+
+   #+begin_src R
+     chain_twice <- function(f, x) {
+         return( f(f(x)) )
+     }
+
+     incr <- function(x) { return( x + 1 ) }
+     chain_twice(incr, 10)   #=> 12
+
+     incr_by <- function(increment) {
+         return( function(x) { x + increment } )
+     }
+     incr_by(10)  #=> function(x) { x + 10 }
+     incr_by(10)(10)  #=> 20
+
+     i12 <- incr_by(12)
+     i17 <- incr_by(17)
+
+     i12(10) #=>22
+     i17(10) #=>27
+     chain_twice(incr_by(10), 10)  #=> 30
+
+     apply(M,  ACROSS_COLS,
+           function(x) { max(x[!is.na(x) && x != 999]) })
+
+     pairwise.distances(X, metric=function(x, y) { max(abs(x - y)) })
+
+     subtract.mean <- function(x)
+     {
+         xbar <- mean(x)
+         return( function(y) { return(y - xbar) } )
+     }
+   #+end_src
+
+   #+begin_src clojure
+     (defn chain-twice
+       "Compose a function with itself"
+       [f]
+       (comp f f))
+
+     (def incr2 (chain-twice inc))
+     (incr2 10)  ;=> 12
+
+     (defn incr-by [increment]
+       (fn [x] (+ x increment)))
+
+     (def incr-by-10 (incr-by 10))
+     (def incr-by-20 (chain-twice (incr-by 10)))
+
+     (incr-by-10 10)    ;=> 20
+     (incr-by-20 10)    ;=> 30
+   #+end_src
+
+   #+begin_src ruby
+     def call_twice(x, &f)
+       f.call(f.call(x))
+     end
+
+     call_twice(10) {|x| x + 1}  #=> 12
+   #+end_src
+
+   #+begin_src python
+     def call_twice(f, x):
+         return f(f(x))
+
+     call_twice(lambda x: x + 1, 10)  #=> 12
+   #+end_src
+
+   These examples illustrate at least three use cases:
+
+     1. Succinct and optimizable representation
+     2. Parameterized strategies
+     3. Dynamically-defined operations
+
+   Notice that functions can be created on the fly /even without names/,
+   what are called *anonymous functions*:
+
+   #+begin_src R
+       integrate(function(x) { x*x }, 0,  1)
+         #=> 0.3333333 with absolute error < 3.7e-15
+   #+end_src
+
+   #+begin_src clojure
+     (->> (sample (range 1 26) :size 77 :replacement true)
+          (filter (fn [x] (pos? (mod x 5))))
+          (filter #(pos? (mod %1 3)))
+          frequencies)
+   #+end_src
+
+   Here, =filter= keeps only the elements of a sequence for which its first
+   argument -- a function -- returns a truthy value. *Higher-order functions* take
+   one or more /functions as arguments/ and/or /returns a function/ as their result.
+
+   In R base, =Filter= is the analogous higher-order function, though there is a
+   nicer version in the [[https://purrr.tidyverse.org/][purrr package]].
+
+   #+begin_src R
+     Filter(function(x) { x %% 3 != 0 }, 1:10) #=>  1  2  4  5  7  8 10
+   #+end_src
+
+   Similarly in Python, the =filter= function is built-in, but
+   comprehensions are an alternative.
+
+   Another example, in JavaScript:
+
+   #+begin_src javascript
+     // Abstracting Array Iteration
+     function forEach(array, itemAction) {
+         for ( var i = 0; i < array.length; i++ ) {
+             itemAction(array[i])
+         }
+     }
+     forEach(["R", "SAS", "SPSS"], console.log);
+     forEach(["R", "SAS", "SPSS"], store);
+     forEach(["R", "SAS", "SPSS"], function(x) {myObject.add(x)});
+   #+end_src
+
+** Pure Functions (where possible)
+
+   A function is *pure* if it:
+
+   + always returns the same value when you pass it the same arguments
+   + has no /observable/ side effects
+
+   Pure functions are deterministic and mathematically well-defined.
+   They are easy to test, to reason about, to change, and to compose.
+
+   Because pure functions do not modify any global state, they can be run
+   simultaneously, allowing parallel or concurrent processing. Or they can be
+   evaluated lazily, only calculating answers when needed.
+
+   Examples:
+
+   #+begin_src R
+     pure <- function(x) {
+         return( sin(x) )
+     }
+
+     global.state <- 10
+
+     not.pure <- function(x) {
+         return( x + global.state )
+     }
+
+     also.not.pure <- function(x) {
+         return( x + rnorm(1) )
+     }
+
+     another.not.pure <- function(x) {
+         save_to_file(x, "storex.txt")
+         return( x + rnorm(1) )
+     }
+
+     u <- 10
+     and.again <- function(x) {
+         ...
+         print(...)              # Input/Output
+         z <- rnorm(n)           # Changing internal state
+         my.list$foo <- mean(x)  # Mutating objects' state
+         u <<- u + 1             # Changing out-of-scope values
+         ...
+     }
+   #+end_src
+
+   And equally subtle:
+
+   #+begin_src python
+     def foo(a):
+         a[0] = -1
+   #+end_src
+
+   When you see a call =foo(x)= for an array =x=, can you tell what happens?
+
+** Immutable Data
+
+   This is a common pattern in imperative programming:
+
+   #+begin_src python
+     a = initial value
+     for index in IndexSet:
+         a[index] = update based on index, a[index], ....
+     return a
+   #+end_src
+
+   Each step in the loop updates -- or /mutates/ -- the state
+   of the object.
+
+   This is so familiar that we don't really think about it, but it is hard to
+   think about your code when all of your data can change between many different
+   states.
+
+   Mutation introduces a greater dependence on time and order in
+   operations. This makes it harder to parallelize or do lazy
+   computation.
+
+   *Immutable data structures* do not change once created.
+
+    - We can pass the data to anywhere (even simultaneously),
+      knowing that it will maintain its meaning.
+    - We can maintain the history of objects as they transform.
+    - With pure functions and immutable data, many calculations
+      can be left to when they are needed (laziness).
+
+   FP favors /immutable data/, and some FP languages have no
+   (or severely limited) notions of assignment.
+
+   Immutability changes how you think about arranging your computation. We
+   produce new values instead of mutating previous ones:
+
+   #+begin_src R
+     for ( i in 1:n ) {
+         a[i] <- a[i] + 1
+     }
+   #+end_src
+
+   versus
+
+   #+begin_src R
+     Map(function(x) { x + 1 }, a)
+   #+end_src
+
+   #+begin_src clojure
+     (map inc a)
+   #+end_src
+
+   A key to making immutable data efficient are *persistent data structures*.
+   These are immutable data structures that use /structure sharing/ to avoid
+   having to copy data, like in the example below. (See "Persistent Vectors"
+   exercise.)
+
+   #+begin_src clojure
+     (def counts {:a 42
+                  :b 12
+                  :c 248
+                  :d 0})
+
+     (assoc counts :e 10 :f 12)
+       ;=> {:a 42, :b 12, :c 248, :d 0, :e 10, :f 12}
+     counts
+       ;=> {:a 42, :b 12, :c 248, :d 0}
+   #+end_src
+
+   Favoring immutable data and pure functions makes values
+   and transformations rather than actions the key
+   ingredient of programs. So FP prefers expressions over
+   statements:
+
+   #+BEGIN_SRC R
+     ## Statements:
+     cleaned <- function(x) {
+         if (is_valid(x)) {
+             return(x)
+         } else {
+             return(cleanup(x))
+         }
+     }
+
+     ## Expressions:
+     cleaned <- function(x) {
+         if (is_valid(x)) {
+             x
+         } else {
+             cleanup(x)
+         }
+     }
+   #+END_SRC
+
+   #+begin_src clojure
+     (defn cleaned [x]
+       (if (valid? x) x (cleanup x)))
+   #+end_src
+
+** Closures
+
+   Closures are functions with an environment -- variables and data -- attached.
+   The environment is persistent, private, and hidden. This is a powerful
+   approach for associating state with functions that you pass into other
+   functions. (In fact, an entire OOP system could be built from closures.)
+
+   #+begin_src R
+     counter <- function(start=0, inc=1) {
+         value <- start
+
+         return(function() {
+             current <- value
+             value <<- value + inc
+             return(current)
+         })
+     }
+
+     cc <- counter(10, 2)
+     dd <- counter(10, 2)
+
+     cc() # 10
+     cc() # 12
+     cc() # 14...
+     value  # Error: object 'value' not found
+     dd() # 10
+   #+end_src
+
+   #+begin_src clojure
+     (defn counter
+       ([] (counter 0 1))
+       ([start] (counter start 1))
+       ([start incr]
+        (let [counter-value (atom start)]
+          (fn [] (swap! counter-value + incr)))))
+
+
+     (def counter1 (counter))
+     (def counter2 (counter 10 5))
+     (def counter3 (counter 2))
+
+     (counter1)  ;=> 1
+     (counter1)  ;=> 2
+     (counter1)  ;=> 3
+
+     (counter2)  ;=> 15
+     (counter2)  ;=> 20
+     (counter2)  ;=> 25
+
+     (counter3)  ;=> 3
+     (counter3)  ;=> 4
+     (counter3)  ;=> 5
+   #+end_src
+
+   Only the anonymous function returned by =counter= can access that
+   internal state: it is private and unique to each instance.
+
+** Laziness (sometimes)
+
+   *Lazy evaluation* (or laziness for short) means that expressions
+   are not evaluated /until their results are needed/.
+
+   #+begin_src haskell
+     fib = 0 : 1 : zipWith (+) fib (tail fib)
+
+     take 10 fib   -- => [0,1,1,2,3,5,8,13,21,34]
+   #+end_src
+
+   #+begin_src clojure
+     (def fib (cons 0 (cons 1 (lazy-seq (map + fib (rest fib))))))
+
+     (take 10 fib) ;=> (0 1 1 2 3 5 8 13 21 34)
+   #+end_src
+
+** Declarative Style
+
+   *Declarative style* emphasizes telling the computer /what/ to
+   accomplish more than telling it /how/ to accomplish it.
+
+   #+begin_src R
+     tokenize <- function(line) {
+         line %>%
+             str_extract_all("([A-Za-z][-A-Za-z]+)") %>%
+             unlist %>%
+             sapply(tolower) %>%
+             as.character
+     }
+
+     ## as.character(sapply(tolower, unlist(str_extract_all("([A-Z]...)", line))))
+   #+end_src
+
+   #+begin_src clojure
+     (defn tokenize [line]
+       (->> line
+            (re-seq "([A-Za-z][-A-Za-z]+)")
+            (map lower-case)))
+   #+end_src
+
+* Map, Reduce, and Filter
+
+  Let's look at a few key higher-order functions -- functions that take
+  functions as arguments -- we can use for many things.
+
+** Map
+
+   The =map= operation operation takes a function and a collection and calls the
+   function for each successive element of the collection, producing a new
+   collection out of the results. For example, in R:
+
+   #+BEGIN_SRC R
+     square <- function(x) x^2
+     Map(square, 1:10)   #=>  list(1, 4, 9, 16, 25, 36, 49, 64, 81, 100)
+   #+END_SRC
+
+   or in Python:
+
+   #+BEGIN_SRC python
+     list(map(lambda x: x*x, range(1, 11)))  #=> [1, 4, 9, 16, 25, 36, 49, 64, 81, 100]
+   #+END_SRC
+
+   using an /anonymous/ function, declared with the =lambda= keyword, that has no
+   name.
+
+   =map= can usually do more than this. In most languages, it can take /multiple
+   sequences/ and a function that takes multiple arguments. It then calls the
+   function with successive elements from each sequence as its arguments,
+   producing a sequence of the results. For example, in R
+
+   #+BEGIN_SRC R
+     Map(`-`, 1:10, 10:1)   #=>  list(-9, -7, -5, -3, -1, 1, 3, 5, 7, 9)
+   #+END_SRC
+
+   and in Python
+
+   #+BEGIN_SRC python
+     list(map(lambda x, y: x - y, range(1, 11), range(10, 0, -1)))
+        #=> [-9, -7, -5, -3, -1, 1, 3, 5, 7, 9]
+   #+END_SRC
+
+   We can use =map= to replace a common pattern we see over and over in code
+   processing data:
+
+   #+BEGIN_SRC R
+     transformed_data <- c()
+
+     for (ii in 1:length(data)) {
+         transformed_data <- c(transformed_data, do_stuff_to(data[ii]))
+     }
+   #+END_SRC
+
+   The =map= operation expresses our meaning more clearly and concisely, and is
+   more efficient to boot (since it does not repeatedly copy the
+   =transformed_data=).
+
+** Filter
+
+   The =filter= operation takes a predicate (essentially a boolean function) and a
+   collection. It calls the predicate for each element, and returns a new
+   collection containing only those elements for which the predicate returns
+   true. For example, in R:
+
+   #+BEGIN_SRC R
+     is_odd <- function(x) { (x %% 2 != 0) }
+
+     Filter(is_odd, 1:10) #=>  c(1, 3, 5, 7, 9)
+     Filter(is_odd, as.list(1:10)) #=>  list(1, 3, 5, 7, 9)
+   #+END_SRC
+
+   Notice that each result is the same type as the collection =Filter= was given.
+   In Python,
+
+   #+BEGIN_SRC python
+     filter(lambda x: x % 2 != 0, range(1, 11)) #=> [1, 3, 5, 7, 9]
+   #+END_SRC
+
+   We can always combine a =map= with a =filter=, applying a function to only those
+   elements matching a predicate. The composability of these operations is a
+   major advantage, and much easier to deal with than building complicated loops
+   over data manually.
+
+** Reduce
+
+   The =reduce= operation, also sometimes called =fold=, is a much more general way
+   to process the elements of a sequence. We could use it to build =map=, =filter=,
+   or many other interesting operations.
+
+   =reduce= takes as arguments a function, an /accumulator/, and a sequence. The
+   function takes two arguments -- the accumulator and one element of the
+   sequence -- and returns an updated accumulator. The function is first passed
+   with the initial accumulator and the first element of the sequence, returning
+   a new accumulator which is passed to the function again with the second
+   element of the sequence, and so on. The final value of the accumulator is
+   returned by =reduce=.
+
+   For example, in R:
+
+   #+BEGIN_SRC R
+     parity_sum <- function(accum, element) {
+         if ( element %% 2 == 0 ) {
+             list(accum[[1]] + element, accum[[2]])
+         } else {
+             list(accum[[1]], accum[[2]] + element)
+         }
+     }
+
+     Reduce(parity_sum, 1:10, list(0,0))  #=> list(30, 25)
+   #+END_SRC
+
+   In Python:
+
+   #+BEGIN_SRC python
+     def parity_sum(acc, x):
+       even, odd = acc
+       if x % 2 == 0:
+           return [even + x, odd]
+       else:
+           return [even, odd + x]
+
+     reduce(parity_sum, range(1,11), [0,0])  #=> [30, 25]
+   #+END_SRC
+
+* Activities
+
+  Let's do some activities to get used to the idea of using higher-order
+  functions like =map=, =filter=, and =reduce=.
+
+  You can work through these activities (or some subset) in any order
+  that interests you. Work in groups of two or three.
+
+  *However*, you may *not* use loops of any form: no =for= or =while= loops can appear
+  anywhere in your code. Anywhere you'd want to loop over a sequence, use =map=,
+  =filter=, or =reduce= instead.
+
+  Write a few tests for each function. These activities are best done in a
+  language with first-class functions, like R, Python, any Lisp variant, or
+  Haskell. They are possible in C++ and Java, but not nearly as convenient or
+  simple.
+
+  These lecture notes are on GitHub
+  (=documents/Topics/functional-programming.org=) for your reference throughout
+  the activity.
+
+  Part of this activity is also the =no-loops= task in the problem bank -- you can
+  clean up your solutions and submit them as an assignment! (You must submit
+  your own solution, not copy from your group.)
+
+  Tasks:
+
+  1. Write a function that sums a list (or vector) of numbers.
+  2. Write a function that takes a list/vector of integers and returns a list
+     containing /only/ those elements for which the /preceding/ integer is negative.
+  3. Write a function that takes a string and returns true if all square =[ ]=,
+     round =( )=, and curly ={ }= delimiters are properly paired and legally nested,
+     or returns false otherwise. Other characters should be ignored.
+
+     For example, =[(a)]{[b]}= is legally nested, but ={a}([b)]= is not.
+
+     /Hint:/ What data structure can you use to track the delimiters you've seen
+     so far?
+
+  4. Write a function =roman= that parses a Roman numeral string and returns the
+     number it represents. You can assume that the input is well-formed, in
+     upper case, and adheres to the "subtractive principle". You need only
+     handle positive integers up to MMMCMXCIX (3999), the largest number
+     representable with ordinary letters.
+
+     A reference on Roman numerals, including the "subtractive principle":
+     http://www.numericana.com/answer/roman.htm#valid
+
+     Be sure to test carefully -- Roman numerals are tricky.
+
+  5. Write a function =chain= that takes as its argument a list of functions, and
+     returns a new function that applies each function in turn to its argument.
+
+     For example,
+
+     #+BEGIN_SRC python
+       import math
+
+       positive_root = chain([abs, math.sqrt])
+
+       positive_root(-4)   #=> 2.0
+     #+END_SRC
+
+  6. Write a function =partial= that takes a function and several arguments and
+     returns a function that takes additional arguments and calls the original
+     function with all the arguments in order. For example,
+
+     #+BEGIN_SRC R
+       foo <- function(x, y, z) { x + y + z }
+       bar <- partial(foo, 2)
+
+       bar(3, 4) #=> 2 + 3 + 4 = 9
+     #+END_SRC
+
+  7. Write a function =count-repeats= (or =count_repeats= or =countRepeats= as
+     you like) and a function =run-length=, that, respectively, takes a
+     sequence of strings and returns the number of strings that are
+     repeated at least twice in a row (at successive indices) and takes
+     a sequence of strings and returns the maximum number of consecutive
+     indices for which a string is repeated. So, for =["h" "h" "t" "h"
+     "t" "t" "t"]=, =count-repeats= would return 2 and =run-length= would
+     return 3. Each of these functions can be implemented directly using
+     a common third function that you write.
+
+  8. Write a function =mavg= that takes a vector of numbers, a window
+     size, and an optional vector of weights equal in length to the
+     window size, and returns a vector of (backward) moving averages, using
+     the weights in the window or the reciprocal of the window size
+     if no weights are supplied. The ith element of the result
+     is the weighted average (using the weights) of the data at
+     indices i, i+1, ..., i+window_size-1. Note that the result is
+     shorter than the data vector by window size.
+
+     Thus, =[1, 2, 3, 4, 5, 6],= =3=, and =[1 2 1]= would return the vector
+
+     #+begin_example
+     [1/5 + 2*2/5 + 3/5, 2/5 + 2*3/5 + 4/5, ..., 4/5 + 2*5/5 + 6/5].
+     #+end_example
+
+  9. Write a function =reverse_map= (or =reverse-map= or =reverseMap= as
+     you like) that takes a hash table and returns the "reversed"
+     hash table. The keys of the reversed hash table are the
+     values of the original hash table, and the values of the
+     reversed hash table are either the keys of the original,
+     or when there are multiple keys with the same value, a list
+     of such keys.
+
+  10. Write a function =nnk= that takes a collection of p-dimensional
+      vectors (as a data matrix, data frame, list of vectors as you
+      prefer), a target point, and a positive integer k, and returns the
+      k nearest neighbors among the data to the target point.
+
+  11. Write a function =bow= that takes an input source for some document
+      (e.g., a file, a stream/connection, a string, a url) and returns a
+      bag-of-words for that document. (A bag, or multiset, of words is a
+      set of the words in the document along with associated count for
+      how many times each word appears. It is usually represented as a
+      vector of counts, where each element of the vector represents a
+      word, with the words in a fixed and pre-determined order.)
+
+  12. Generalize the function =bow= from the previous activity to accept
+      another parameter =ngram=, which is a positive integer determining
+      how many consecutive words to consider at once. The original =bow=
+      function corresponds to =ngram = 1=. If =ngram = 2=, then document
+      "every good student does fine every day" is converted into
+      "words" (actually 2-grams): "every good", "good student",
+      "student does", "does "fine", "fine every", and "every day". If
+      =ngram = 3= in this example, we would have "every good student",
+      "good student does", "student does fine", "does fine every", and
+      "fine every day".
+
+
+* Appendix: A Brief Clojure Primer
+** Why Clojure?
+   + A powerful and elegantly designed language
+     with a simple core and extensive libraries.
+   + Immutability, concurrency, rich core data types
+   + Same language runs on the JVM and the browser
+   + A significant /data-science/ footprint
+   + Cutting-edge ideas: spec, transducers, metadata, async, ...
+   + All the power of lisp: macros, REPL-driven development,
+      single and multiple dispatch, destructuring, ...
+   + Functional design, testing, rapid development
+   + Great community
+
+** Simple Syntax
+
+   A clojure form (expression) is either:
+
+   1. A /literal/ piece of data
+
+      - Numbers 42, -1.23, 8/7 (rational), BigInteger, ...
+      - Boolean Values ~true~ and ~false~
+      - Null value ~nil~
+      - Strings ~"foo bar"~ and characters ~\c~
+      - Symbols ~'foo~  or Keywords ~:bar~
+      - Regular expressions ~#"[A-Z][a-z]*"~
+      - Vectors ~[1 2 3]~
+      - Sets ~#{"dog" "cat" "wolverine"}~
+      - Maps  ~{:name   "Col. Mustard"~
+               ~:weapon "candlestick"~
+               ~:room   "Drawing Room"}~
+      - Lists ~'(1 2 3)~
+      - Evaluated symbols: ~x~, ~even?~, ~upper-bound~
+
+   2. Function call  ~(+ 1 2 3)~ ~(f "input", :option 1)~
+
+   Whitespace (including ',') and comments are ignored.
+
+   Everything is an expression, which has a value, e.g.:
+   ~(if true 100 -100)~ has the value 100.
+
+   Functions are first class objects, and some literal
+   objects act like functions too.
+
+** Simple Operations
+*** Functions
+   #+begin_src clojure
+     (defn f
+       "Documentation here"
+       [arguments here]
+       (body arguments here))
+
+     (f "called" "this way")
+
+     (defn f2
+       "This function has more than one arity"
+       ([] "no arguments value")
+       ([one-argument] (+ one-argument 10))
+       ([two arguments] [two arguments])
+       ([two plus & more] {:first two :second plus :rest more}))
+
+     (f2)                     ;=> "no arguments value"
+     (f2 32)                  ;=> 42
+     (f2 "these all" "work")  ;=> ["these all", "work"]
+     (f2 :a :b :c :d :e :f)   ;=> {:first :a, :second :b,
+                              ;    :rest [:c :d :e :f]}
+
+     ;; Anonymous function and a shortcut
+
+     (fn [x y] (+ x y))  ; these are equivalent
+     #(+ %1 %2)
+
+     (#(+ %1 %2) 10 6)   ;=> 16
+
+     ;; Closures
+
+     (let [env 10]
+       (defn g [x]
+         (+ env x)))
+
+     (g 20)  ;=> 30
+   #+end_src
+*** Special forms
+    Binding values
+    #+begin_src clojure
+      (let [x 10,       ;x, y, and z are immutable
+            y 20
+            z 30]
+        (+ x y z 4))    ;=> 64
+      ; x, y, z are not bound out here
+
+      (let [simple-mutable (atom 0)] ; an atom is thread safe
+        (swap! simple-mutable inc))  ;=> 1
+
+      (def answer 42)  ; globally bound vars
+      (def sums {[1 2 3] 6, [10 22] 32, [] 0})
+      (def v [1 1 3 5 8])
+      (def a-map {:a 1 :b 2 :c 3})
+      (def a-set #{:foo :bar :zap}) ; elements are unique
+
+      ;; note any values can be keys for a map
+    #+end_src
+
+    Conditionals
+    #+begin_src clojure
+      (if true 1 0)  ;=> 1
+      (if false 1 0) ;=> 0
+      (if nil 1 0)   ;=> 0
+      ;; only false and nil are falsy, all other values truthy
+      (if "" 1 0)    ;=> 1
+      (if 0 1 0)     ;=> 1
+      (if [] 1 0)    ;=> 1
+
+      ;; Functions are values too
+      ((if true + -) 4 2)  ;=> 6
+      ((if false + -) 4 2) ;=> 2
+
+      (when true
+        (println "Hello, world"))
+    #+end_src
+
+    Comparisons
+    #+begin_src clojure
+      (= 10 20)  ;=> false
+      (= [:a :b :c] [:a :b :c])  ;=> true
+      (< 10 20)  ;=> true
+      (<= 11 11) ;=> true
+      (or (= nil nil) (= 3 4))   ;=> true
+      (and (= nil nil) (= 3 4))  ;=> false
+      (and (= nil nil) (= 4 4))  ;=> true
+      (not false)                ;=> true
+    #+end_src
+
+    Loops
+    #+begin_src clojure
+      (loop [step 0]
+        (println (str "This is step " step "."))
+        (if (> step 9)
+          (println "Done.")
+          (recur (inc step))))
+    #+end_src
+    What does this print?
+
+*** Accessing data
+   #+begin_src clojure
+     (get sums [1 2 3])        ;=> 6
+     (sums [1 2 3])            ;=> 6  the map acts like a function
+     (get sums [2 2] :missing) ;=> :missing  (default value)
+
+     (get a-map :b)  ;=> 2
+     (a-map :b)      ;=> 2
+     (:b a-map)      ;=> 2  keywords also act like a function
+
+     (get v 2)      ;=> 3
+     (nth v 2)      ;=> 3
+     (nth v 10)     ;=> EXCEPTION
+     (nth v 10 42)  ;=> 42
+     (get v 10)     ;=> nil
+   #+end_src
+*** Adding to collections
+   #+begin_src clojure
+   (conj v 13) ;=> [1 1 3 5 8 13]
+   v           ;=> [1 1 3 5 8]  (v is immutable)
+   (conj a-set :ahhh) ;=> #{:foo :bar :zap :ahhh}
+   a-set              ;=> #{:foo :bar :zap} structure shared
+
+   (assoc a-map :d 4) ;=> {:a 1, :b 2, :c 3, :d 4}
+   a-map              ;=> {:a 1, :b 2, :c 3}  structure shared
+   #+end_src
+*** Destructuring
+
+   We can bind names to values within structures
+   with *destructuring*:
+
+   a, b = f(12)  # f returns a tuple (12, 13); a = 12, b = 13
+
+   #+begin_src clojure
+     (let [[x y] [1 2 3]]
+       (vector x y))      ;=> [1 2]
+
+     (let [[x y & more] [1 2 3 4 5]]
+       (vector x y more))  ;=> [1 2 '(3 4 5)]
+
+     (let [{:keys [a b c]} {:a 1 :b 2 :c 3}]
+       [a b c])    ;=> [1 2 3]
+
+     (defn f [[x y] {:keys [a b c]}]
+       [x y a b c])
+
+     (f [1 2] {:a 10 :b 20 :c 30}) ;=> [1 2 10 20 30]
+
+     (defn g [x y & more-args]
+       (+ 4 x y (first more-args)))
+
+     (g 10 20 30 40 50 60)         ;=> 64
+     (apply g 10 [20 30 40 50 60]) ;=> 64
+
+     ;; much more is possible
+   #+end_src
+** Namespaces and libraries
+   All code is defined within a *namespace*
+   that controls access to each symbol.
+
+   This lets library code be loaded without
+   stepping on other code.
+
+   For example: all the code I'm executing now
+   is in the =user= namespace. There are mechanisms
+   for importing symbols from other namespaces,
+   which is how you work with libraries.
+
+   There are also ways to access features of
+   the host platform (e.g., the JVM or the javascript
+   environment).
+
+   This is beyond our goals for today
+
+* Appendix: Statistical Examples with Clojure
+** Means and Variances
+   We can compute simple means using the recurrence
+   \begin{equation*}
+     \bar x_{n+1} = \bar x_n + K_n (x_{n+1} - \bar x_n),
+   \end{equation*}
+   where $K_n = 1/(n + 1)$.  The value $K_n$
+   is a ``gain'' parameter that applies to the
+   ``residual'' at the next step.
+
+   #+begin_src clojure
+     (defn simple-update [[xbar n] x]
+       (let [n' (+ n 1)
+             K (/ n')]
+         [(+ xbar (* K (- x xbar))), n']))
+
+     (def data (range 5))
+
+     (->> data
+          (reduce simple-update [0.0 0])
+          first)
+   #+end_src
+
+   This same gain idea works with weighted
+   averages using the same recurrence with
+   where $K_n = w_{n+1}/\sum_{i=1}^{n+1} w_i$.
+
+   #+begin_src clojure
+     (defn weighted-update [[xbar wsum] [x w]]
+       (let [wsum' (+ wsum w)
+             K (/ w wsum')]
+         [(+ xbar (* K (- x xbar))), wsum']))
+
+     (def data (range 5))
+     (def weights [1.0 2.0 3.0 4.0 5.0])
+
+     (->> (map vector data weights)
+          (reduce weighted-update [0.0 0])
+          first)
+   #+end_src
+
+   Alternatively, we could just keep track
+   of the components
+
+   #+begin_src clojure
+     (defn weighted-update-nodiv [[x-dot-w wsum] [x w]]
+       [(+ x-dot-w (* x w)), (+ wsum w)])
+
+     (->> (map vector data weights)
+          (reduce weighted-update-nodiv [0.0 0])
+          (apply /))
+   #+end_src
+
+   but the gain form will come in handy soon.
+
+   We can do similar things with variance
+
+   #+begin_src clojure
+     (defn welford-variance
+       "Updating function for Welford variance computation
+       0-arity version gives initializer, 2-arity updater."
+       ([] {:S 0.0 :xbar 0.0 :wsum 0.0})
+       ([{:keys [S xbar wsum]} [x w]]
+        (let [wsum' (+ wsum w)
+              K (/ w wsum')
+              xbar' (+ xbar (* K (- x xbar)))]
+          {:S    (+ S (* w (- x xbar) (- x xbar')))
+           :xbar xbar'
+           :wsum wsum'})))
+
+     (let [extract-parts (juxt :S (comp dec :wsum))]
+       (->> (map vector data (repeat 1))
+            (reduce welford-variance (welford-variance))
+            extract-parts
+            (apply /)))
+   #+end_src
+
+** Least Squares
+
+   Consider a basic homoskedastic regression model
+   \begin{equation*}
+     y = X \beta + \sigma^2 \epsilon,
+   \end{equation*}
+   where $X$ is $n \times p$, $\beta$ is $p \times 1$,
+   and $\epsilon$ is mean 0, unit variance noise.
+
+   We can compute $\hat\beta = (X^T X)^{-1} X^T y$
+   directly with various methods, but it is useful
+   to think of this /sequentially/. With the help
+   of the Woodbury formula for one step updates of
+   an inverse, we have:
+
+   #+begin_src clojure
+     (defn as-scalar [mat]
+       (select mat 0 0))
+
+     (defn %*% [a b]
+       (let [M (mmul a b)]
+         (if (every? #(= % 1) (shape M)) (as-scalar M) M)))
+
+     (defn least-squares-update [sigma-squared p scale]
+       (fn
+         ([] {:beta-hat (new-matrix p 1)
+              :V (mul (identity-matrix p) sigma-squared scale)})
+         ([{:keys [beta-hat V]} [x y]]
+          (let [VxT (mmul V (transpose x))
+                D (+ sigma-squared (%*% x VxT))
+                K (div VxT D)
+                residual (- y (%*% x beta-hat))]
+            {:beta-hat (add beta-hat (mul K residual))
+             :V (sub V (mul (mmul K (transpose K)) D))}))))
+
+     (def lsdata
+       "Sequential regression data, each element of which
+       contains a row of X and the corresponding y."
+       [[[[1.0 0.0 0.0 0.0]]    -2.28442]
+        [[[1.0 1.0 1.0 1.0]]    -4.83168]
+        [[[1.0 -1.0 1.0 -1.0]] -10.46010]
+        [[[1.0 -2.0 4.0 -8.0]]   1.40488]
+        [[[1.0 2.0 4.0 8.0]]   -40.80790]])
+
+     (def updater (least-squares-update 1.0 4 1000.0))
+
+     (->> lsdata
+          (reduce updater (updater))
+          :beta-hat)
+   #+end_src
+
+   This is regression analysis in a functional style,
+   with a few simple lines
+
+** The Kalman Filter
+
+   Our sequential least squares actually solves another
+   problem: finding the minimum variance predictor for a
+   linear dynamical system driven by a stochastic process.
+
+   Consider state vectors $x_t$ and observation vectors
+   $y_t$ that evolve as follows:
+
+   \begin{align*}
+      x_{t+1} &= A x_t + \delta_t \\
+      y_{t+1} &= C x_t + \epsilon_t,
+   \end{align*}
+
+   where $\delta_t$ and $\epsilon_t$ are each, say, iid
+   Normal, mean 0 noise with fixed covariance. (These are
+   called the /state noise/ and /measurement noise,/
+   respectively.)
+
+   If $\hat x_{t+1}$ (and $\hat y_{t+1}$) is the best
+   predictor of $x_{t+1}$ (and $y_{t+1}$)
+   given observations up to time $t$, then
+
+   \begin{equation*}
+     \hat x_{t+1} = A \hat x_t + K_t (y_t - \hat y_t),
+   \end{equation*}
+
+   which is of the same form we just computed.
+
+   This gives us a functional implementation of
+   the *Kalman Filter*.
+
+** Markov Chain Monte Carlo
+
+   *Markov Chain Monte Carlo (MCMC)* is a simulation method
+   where we create a Markov chain whose /limiting distribution/
+   is a distribution from which we want to sample.
+
+   #+begin_src clojure
+     (defn mcmc-step
+       "Make one step in MH chain, choosing random move."
+       [state moves]
+       (let [move (random-choice moves)]
+         (metropolis-hastings-step (move state))))
+
+     (defn mcmc-sample
+       "Generate an MCMC sample from an initial state.
+        Returns a lazy sequence.
+
+        Keyword arguments:
+
+          :move    -- a collection of moves, which are
+                      functions from state to a candidate
+          :select  -- a selector function which indicates
+                      a boolean for each index and state
+                      if that state should be kept in the
+                      output
+          :extract -- a function to extract features
+                      (e.g., parameters) from the state
+       "
+       [initial-state & {:keys [moves select extract]
+                         :or {select (constantly true),
+                              extract identity}}]
+       (letfn [(stepper [index state]
+                 (lazy-seq
+                  (if (select index state)
+                    (cons (extract state)
+                          (stepper (inc index) (mcmc-step state moves)))
+                    (stepper (inc index) (mcmc-step state moves)))))]
+         (stepper 0 initial-state)))
+
+     (def chain
+       (mcmc-sample initial-state
+                    :select (mcmc-select :burn-in 1000 :skip 5)
+                    :extract :theta1
+                    :moves [(univariate-move :theta1 random-walk 0.1)
+                            (univariate-move :theta2 random-walk 0.4)
+                            (univariate-move :theta3 random-walk 0.2)]))
+
+     (take 100 chain)
+   #+end_src
+
+   The design of this chain is modular, and easily
+   adaptable to a wide variety of models.
