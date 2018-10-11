@@ -1,0 +1,282 @@
+#+TITLE: Accessing SQL Databases
+
+This file contains all the instructions you need to [[#sql-from-the-command-line][connect to our PostgreSQL
+database server]], [[#sql-in-code][access it from R or Python]], and [[#practicing-safe-sql][and correctly use parametrized
+queries]] to insert values into your queries.
+
+* SQL from the Command Line
+
+  1. For Mac and Linux users, open a terminal. Windows users can start Git Bash.
+
+  2. Log into the department database server, =sculptor.stat.cmu.edu=, via SSH
+     using the username and password Carl Skipper sent you in email:
+
+     #+BEGIN_SRC sh
+       ssh yourusername@sculptor.stat.cmu.edu
+     #+END_SRC
+
+     You'll be asked for your password. Type it (the letters won't show
+     up), then hit Enter and you should be logged in. If it asks "are
+     you sure you want to continue connecting?", say yes.
+
+     (Windows users should be able to do this through Git Bash. If you prefer a
+     fancier SSH client, you can use either PuTTY or SSH Tectia. SSH Tectia is
+     [[https://www.cmu.edu/computing/software/all/tectia/index.html][provided free by CMU]], and PuTTY is [[https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html][open-source software]]. Download whichever
+     you prefer and use its menus to log in to =sculptor.stat.cmu.edu= with your
+     username and password.)
+
+  4. At the shell prompt, type
+
+     #+BEGIN_SRC sh
+       psql
+     #+END_SRC
+
+     to start an interactive PostgreSQL REPL. You should now see a prompt like
+     =yourusername#=.
+
+  5. Work in Postgres. To quit =psql=, type =\q= at the prompt.
+
+     *Warning:* Every SQL command must end with a semicolon; if you forget it,
+     =psql= will wait patiently until you type a semicolon, and /only then/ will it
+     run the commands you have typed.
+
+     *Warning:* If you forget to close a quotation mark or parenthesis, =psql= will
+     wait for you to close it, even if you type a semicolon. You must close the
+     quote or parenthesis before =psql= will run anything you typed.
+
+
+  Note that you're sending commands *to be run on the server*, not on your own
+  computer. If, for example, you want to load a file of SQL commands that you
+  have stored on your own computer, you must first upload it to the server. To
+  do this, you can use the =scp= command:
+
+  #+BEGIN_SRC sh
+    scp some-file-on-your-computer.sql yourusername@sculptor.stat.cmu.edu:~/
+  #+END_SRC
+
+  That will copy =some-file-on-your-computer.sql= to the server, in your home
+  directory (=/home/yourusername/=). You can then load it in =psql= with
+
+  #+BEGIN_EXAMPLE
+    \i some-file-on-your-computer.sql
+  #+END_EXAMPLE
+
+
+* SQL in Code
+
+  It's nice to be able to type queries into =psql= and see results, but most often
+  you'd like to do more than that. You're not just making a database to run
+  handwritten queries -- you're using it to store data for a big project, and
+  that data then needs to be used to fit models, make plots, prepare reports,
+  and all sorts of other useful things. Or perhaps your code is /generating/ data
+  which needs to be stored in a database for later use.
+
+  Regardless, you'd like to run queries inside R, Python, or your preferred
+  programming language, and get the results back in a form that can easily be
+  manipulated and used.
+
+  Fortunately, PostgreSQL -- and most other SQL database systems -- use the
+  /client-server/ model of database access. The database is a /server/, accessible
+  to any program on the local machine (like the =psql= client) and even to
+  programs on other machines, if the firewall allows it.
+
+  This is why you need a password to start =psql=. =psql= connects to the running
+  Postgres server, and to do so it needs a username (the user you logged into
+  SSH as) and a password.
+
+  But this also means you can run scripts on your own computer that connect to
+  Postgres with that same username and password.
+
+** SQL in R
+
+   The [[https://cran.r-project.org/web/packages/RPostgreSQL/][RPostgreSQL]] package provides the interface you need to connect to Postgres
+   from within R. There are similar packages for other database systems, all
+   using a similar interface called [[https://cran.r-project.org/web/packages/DBI/index.html][DBI]], so you can switch to MySQL or MS SQL
+   without changing much code.
+
+   To start using Postgres from within R, you need to create a /connection/ object,
+   which represents your connection to the server.
+
+   #+begin_src R
+     library(RPostgreSQL)
+
+     con <- dbConnect(PostgreSQL(), user="yourusername", password="yourpassword",
+                      dbname="yourusername", host="sculptor.stat.cmu.edu")
+   #+end_src
+
+   =con= now represents the connection to Postgres. Queries can be sent over this
+   connection. You can connect to multiple different databases and send them
+   different queries.
+
+   To send a query, use =dbSendQuery=:
+
+   #+begin_src R
+     result <- dbSendQuery(con, "SELECT persona, score FROM events WHERE ...")
+   #+end_src
+
+   =result= is an object representing the result, but /does not/ load the actual
+   results all at once. If the query result is very big, you may want to only
+   look at chunks of it at a time; otherwise, you can load the whole thing into a
+   data frame. =dbFetch= loads the requested number of rows from the result, or
+   defaults to loading the entire result if you'd prefer, all in a data frame.
+
+   #+begin_src R
+     data <- dbFetch(result) # load all data
+
+     data <- dbFetch(result, n=10) # load only ten rows
+
+     dbClearResult(result)
+   #+end_src
+
+   As a shortcut, =dbGetQuery= runs a query, fetches all of its results, and clears
+   the result, all in one step.
+
+** SQL in Python
+
+   [[http://initd.org/psycopg/][Psycopg]] is a popular PostgreSQL package for Python. It has a different
+   interface: since Python doesn't have native data frames, you can instead
+   iterate over the result rows, where each row is a tuple of the columns. To
+   connect:
+
+   #+begin_src python
+     import psycopg2
+
+     conn = psycopg2.connect(host="sculptor.stat.cmu.edu", database="yourusername",
+                             user="yourusername", password="yourpassword")
+
+     cur = conn.cursor()
+
+     cur.execute("INSERT INTO foo (bar, baz, spam) "
+                 "VALUES (17, 'walrus', 'penguin')")
+   #+end_src
+
+   If we do a =SELECT=, we can get the results with a =for= loop or the =fetchone= and
+   =fetchmany= methods:
+
+   #+begin_src python
+     cur.execute("SELECT * FROM events")
+
+     # iterating:
+     for row in cur:
+         print(row)
+
+     # instead, one at a time:
+     row = cur.fetchone()
+   #+end_src
+
+   The =execute= method is used regardless of the type of query.
+
+** Storing Your Password
+
+   The code above stores your password right in the source file. This is a *bad
+   idea*. If the code is ever shared with anyone, posted online, or otherwise
+   revealed, anyone who sees it now has your database username and password and
+   can view or modify any of your data. If you commit the file to Git, your
+   password is now in your Git history *forever*. Fortunately, there are ways to
+   work around this.
+
+*** R
+
+    Run this R code:
+
+    #+BEGIN_SRC R
+      file.edit(file.path("~", ".Rprofile"))
+    #+END_SRC
+
+    This will create a file called =~/.Rprofile= in your home directory and open
+    it for editing. In this file, write something like
+
+    #+BEGIN_SRC R
+      DB_USER <- "yourusername"
+      DB_PASSWORD <- "yourpassword"
+    #+END_SRC
+
+    Save and close the file. Start a new R session. The =DB_USER= and =DB_PASSWORD=
+    variables will be defined in /any R script you run/, so you can use them in
+    your code. And since the =.Rprofile= is not in your assignments repository,
+    you won't accidentally commit it to your Git history.
+
+*** Python
+
+    Python doesn't have something like =~/.Rprofile=. Instead, when you do an
+    assignment that requires SQL access, create a separate file =credentials.py=
+    defining your username and password in variables. You can =import credentials=
+    and then use =credentials.DB_USER= and =credentials.DB_PASSWORD= in your other
+    code files.
+
+    To avoid accidentally committing =credentials.py=, create (or modify, if it
+    exists) a file called =.gitignore= in the root of your =assignments= repository.
+    Add the line =credentials.py= to it. This will make Git ignore any files
+    called =credentials.py=, so you don't accidentally commit them.
+
+
+* Practicing Safe SQL
+
+  Suppose you've loaded some data from an external source -- a CSV file, input
+  from a user, from a website, another database, wherever. You need to use some
+  of this data to do a SQL query.
+
+  #+begin_src R
+    result <- dbSendQuery(paste0("SELECT * FROM users WHERE username = '", username, "' ",
+                                 "AND password = '", password, "'"))
+  #+end_src
+
+  Now suppose =username= is the string "'; DROP TABLE users;--". What does the
+  query look like before we send it to Postgres?
+
+  #+begin_src sql
+    SELECT * FROM users
+    WHERE username = ''; DROP TABLE users; -- AND password = 'theirpassword'
+  #+end_src
+
+  We have /injected/ a new SQL statement, which drops the table. Because =--=
+  represents a comment in SQL, the commands following are not executed.
+
+  [[file:../Figures/xkcd-327.png]]
+
+  Less maliciously, the username might contain a single quote, confusing
+  Postgres about where the string ends and causing syntax errors. Or any number
+  of other weird characters which mess up the query. Clever attackers can use
+  SQL injection to do all kinds of things -- imagine if the =password= variable
+  were =foo' OR 1=1= -- we'd be able to log in without knowing the right password!
+
+  We need a better way of writing queries with parameters determined by the
+  code. Fortunately, database systems provide /parametrized queries/, where the
+  database software is explicitly told "this is an input, with this value" so it
+  knows not to treat it as SQL syntax. For example:
+
+  #+begin_src R
+    username <- "'; DROP TABLE users;--"
+    password <- "walruses"
+
+    query <- sqlInterpolate(con,
+                            "SELECT * FROM users WHERE username = ?user AND password = ?pass",
+                            user=username, pass=password)
+
+    users <- dbGetQuery(con, query)
+  #+end_src
+
+  Strings of the form =?var= are replaced with the corresponding =var= in the
+  arguments, but with any special characters escaped so they do not affect the
+  meaning of the query. In this example, =query= is now
+
+  #+begin_src sql
+    SELECT * FROM users WHERE username = '''; DROP TABLE users;--'
+    AND password = 'walruses'
+  #+end_src
+
+  Note how the single quote at the beginning of =username= is doubled there:
+  that's a standard way of escaping quotation marks, so Postgres recognizes it's
+  a quote inside a string, not the boundary of the string.
+
+  psycopg2 provides [[http://initd.org/psycopg/docs/usage.html#query-parameters][similar facilities]]:
+
+  #+begin_src python
+    cur.execute("SELECT * FROM users "
+                "WHERE username = %(user)s AND password = %(pass)s",
+                {"user": username, "pass": password})
+  #+end_src
+
+  You should /always/ use this approach to insert data into SQL queries. You may
+  think it's safe with your data, but at the least opportune moment, you'll
+  encounter [[http://www.catb.org/jargon/html/N/nasal-demons.html][nasal demons]].

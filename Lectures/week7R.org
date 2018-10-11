@@ -5,8 +5,10 @@
 #+AUTHOR: Christopher Genovese and Alex Reinhart 
 
 * Announcements
-  - Notes and ClassFiles in documents repository (=Lectures= and =ClassFiles/week7=, respectively)
-  - See Instructions page for details on connecting to SQL server
+  - Notes and ClassFiles in documents repository (=Lectures= and =ClassFiles/week7=,
+    respectively)
+  - See =Info/SQL/README.org= page in =documents= for details on connecting to SQL
+    server and using it from code
 * Where do you store your data?
 
   You have a data set that you want to use in your work.
@@ -178,7 +180,7 @@
 
   See the Postgres documentation on ``[[https://www.postgresql.org/docs/9.2/static/datatype.html][Data Types]]'' for details
   and for more examples.   
-     
+
 ** Tables (Relations, Schemas, Entities)
 
    The basic unit of data storage in an RDB is the *table*. Tables are
@@ -285,7 +287,6 @@
     in =ClassFiles/week7= that you should copy into a working directory
     for this class:
 
-      + =instructions=
       + =events.csv=
       + =events.sql=
       + =commands.sql=
@@ -294,6 +295,10 @@
     can copy and paste into the prompt to save typing. Of course, typing
     the commands is fine too and is not a bad way to get a feel for how
     the commands work.
+
+    All SQL instructions (for connecting to the server, using =psql=, accessing it
+    from code) are posted in =Info/SQL/README.org= and example files in that
+    directory.
 
 ** Entering SQL Statements
 
@@ -318,7 +323,7 @@
       information on any aspect
       of postgres through the
       [[https://www.postgresql.org/docs/manuals/][online documentation]].
-    - The stat server is running version 9.2,
+    - The stat server is running version 10.5,
       that that will be updated if needed.
 
 ** A Simple Example
