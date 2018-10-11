@@ -232,7 +232,7 @@ queries]] to insert values into your queries.
   We have /injected/ a new SQL statement, which drops the table. Because =--=
   represents a comment in SQL, the commands following are not executed.
 
-  [[file:../Figures/xkcd-327.png]]
+  [[file:../../Figures/xkcd-327.png]]
 
   Less maliciously, the username might contain a single quote, confusing
   Postgres about where the string ends and causing syntax errors. Or any number
