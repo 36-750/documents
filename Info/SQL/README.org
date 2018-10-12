@@ -80,12 +80,30 @@ queries]] to insert values into your queries.
   to any program on the local machine (like the =psql= client) and even to
   programs on other machines, if the firewall allows it.
 
-  This is why you need a password to start =psql=. =psql= connects to the running
-  Postgres server, and to do so it needs a username (the user you logged into
-  SSH as) and a password.
+** Setting Your Password
 
-  But this also means you can run scripts on your own computer that connect to
-  Postgres with that same username and password.
+   You must first set your Postgres password. When you run =psql= on =sculptor=, it
+   knows who you are -- you're logged in via SSH. But when you connect from an R
+   or Python script on your laptop, Postgres has no idea who you are. We need to
+   set a password so Postgres can recognize you.
+
+   *You only need to do this once.* If you've set a password once, you don't need
+   to do it again unless you want to change your password.
+
+   Log in to =sculptor.stat.cmu.edu= via SSH as shown above, and run =psql=. At the
+   prompt, type
+
+   #+BEGIN_EXAMPLE
+     \password
+   #+END_EXAMPLE
+
+   =psql= will ask you to =Enter new password:=. Enter a password (you could use the
+   same one Carl sent you, so you don't forget it). *The password will not show
+   up as you type*, so don't be confused that letters or stars don't appear.
+
+   =psql= will ask you to confirm your new password, and then will return you to
+   the prompt. You can now connect with your username and the password you just
+   set, following the instructions below.
 
 ** SQL in R
 
@@ -131,6 +149,8 @@ queries]] to insert values into your queries.
    As a shortcut, =dbGetQuery= runs a query, fetches all of its results, and clears
    the result, all in one step.
 
+   A complete example is given in =connect-in-R.r= in this directory.
+
 ** SQL in Python
 
    [[http://initd.org/psycopg/][Psycopg]] is a popular PostgreSQL package for Python. It has a different
@@ -165,6 +185,8 @@ queries]] to insert values into your queries.
    #+end_src
 
    The =execute= method is used regardless of the type of query.
+
+   A complete example is given in =connect-in-python.py= in this directory.
 
 ** Storing Your Password
 
