@@ -7,9 +7,11 @@
   an interactive debugger before sticking in a few dozen print statements.
   Debugging is hard without the right tools:
 
+  #+BEGIN_QUOTE
   "Debugging is twice as hard as writing the code in the first place. Therefore,
   if you write the code as cleverly as possible, you are, by definition, not
   smart enough to debug it." -- Brian Kernighan
+  #+END_QUOTE
 
 ** Using your tests
 

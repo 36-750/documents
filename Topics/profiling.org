@@ -7,12 +7,14 @@
   But without data to guide our optimization, it will be wasted effort. As Knuth
   says,
 
+  #+BEGIN_QUOTE
   "Programmers waste enormous amounts of time thinking about, or worrying about,
   the speed of noncritical parts of their programs, and these attempts at
   efficiency actually have a strong negative impact when debugging and
   maintenance are considered. We /should/ forget about small efficiencies, say
   about 97% of the time: *premature optimization is the root of all evil.* Yet we
   should not pass up our opportunities in that critical 3%."
+  #+END_QUOTE
 
   Profiling is how we find that critical 3%.
 
@@ -140,8 +142,8 @@
    optimizations add a complexity cost to your code.)
 
    Remember that program execution time is a random variable with noise: you
-   need more than one run to tell if a change mattered. Remember that a profiler
-   adds overhead: code is slower when it is being profiled.
+   need more than one run to tell if a change mattered. Profile your code like a
+   statistician!
 
    Many languages provide microbenchmarking packages to do this for you. For
    example, in Python:
@@ -157,6 +159,26 @@
    #+END_SRC
 
    R has the [[https://cran.r-project.org/web/packages/microbenchmark/index.html][microbenchmark package]] to do the same thing.
+
+* Activity
+
+  Update your copy of the =documents= repository and open the file
+  =ClassFiles/week8/profiling-example.R=.
+
+  Don't run the code yet. Instead,
+
+  1. Look through the QuickSort code and try to understand how it works.
+  2. Think about how you might speed it up. Come up with a few suggestions with
+     your group.
+
+** Testing the ideas
+
+   Now let's profile it.
+
+   At the bottom of the file are a few lines of code to run R's statistical
+   profiler. Run it and look at the output with your group. Look back at the
+   code. Is there a simple change that would save a lot of time? Try it and
+   measure how much this change matters.
 
 * Memory profiling
 
@@ -231,38 +253,8 @@
 
    Memory profiling (sometimes called "heap profiling") is not as common as
    ordinary profiling, but can still be very useful. There are a number of tools
-   for different languages. The granddaddy might be [[http://valgrind.org/docs/manual/ms-manual.html][Massif]], part of the [[http://valgrind.org/][Valgrind]]
-   suite of tools for analyzing compiled code.
-
-   Massif takes snapshots of the heap as your program executes, then provides
-   detailed analysis showing which functions allocated memory and in what
-   amounts. It uses a detailed call graph to see how they were used. Here's an
-   example from the [[http://valgrind.org/docs/manual/ms-manual.html][Massif documentation]]:
-
-   #+BEGIN_EXAMPLE
-     --------------------------------------------------------------------------------
-       n        time(B)         total(B)   useful-heap(B) extra-heap(B)    stacks(B)
-     --------------------------------------------------------------------------------
-      10         10,080           10,080           10,000            80            0
-      11         12,088           12,088           12,000            88            0
-      12         16,096           16,096           16,000            96            0
-      13         20,104           20,104           20,000           104            0
-      14         20,104           20,104           20,000           104            0
-     99.48% (20,000B) (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
-     ->49.74% (10,000B) 0x804841A: main (example.c:20)
-     |
-     ->39.79% (8,000B) 0x80483C2: g (example.c:5)
-     | ->19.90% (4,000B) 0x80483E2: f (example.c:11)
-     | | ->19.90% (4,000B) 0x8048431: main (example.c:23)
-     | |
-     | ->19.90% (4,000B) 0x8048436: main (example.c:25)
-     |
-     ->09.95% (2,000B) 0x80483DA: f (example.c:10)
-       ->09.95% (2,000B) 0x8048431: main (example.c:23)
-   #+END_EXAMPLE
-
-   Python's [[https://pypi.python.org/pypi/memory_profiler][memory_profiler]] module offers line-by-line memory profiling
-   features. A simple example from its documentation:
+   for different languages. Python's [[https://pypi.python.org/pypi/memory_profiler][memory_profiler]] module offers line-by-line
+   memory profiling features. A simple example from its documentation:
 
    #+BEGIN_SRC python
      @profile
@@ -291,8 +283,8 @@
    memory usage instead of tracking specific allocations, and garbage collection
    can occur unpredictably.
 
-   R's =Rprof= has memory profiling, but the output is poorly documented and
-   difficult to understand.
+   R's =Rprof= has memory profiling, and its output is shown in =provis= when you
+   use the profiler in RStudio.
 
 ** Reducing allocations
 
@@ -326,6 +318,12 @@
      for (i in seq_along(data)) {
          results[i] <- calculate_stuff(data[i])
      }
+
+     ## or:
+
+     results <- Map(calculate_stuff, data)
+
+     # (depending on if data is a list, vector, data frame...)
    #+END_SRC
 
    Intermediate results also require allocations:
