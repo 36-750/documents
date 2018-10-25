@@ -1,0 +1,41 @@
+#+TITLE: Backtracking \\
+#+TITLE: Statistics 650/750 \\
+#+TITLE: Week 9 Thursday
+#+DATE: 26 Oct 2018
+#+AUTHOR: Alex Reinhart and Christopher Genovese
+
+* Announcements
+
+  - You should, *right now*,
+    1. Pull the latest problem bank repository.
+    2. Go to your assignments repository.
+    3. Run =new-homework sudoku=.
+
+* Backtracking
+
+  /Backtracking/ is a general strategy for solving /constraint satisfaction/
+  problems: we have a bunch of constraints on possible solutions, and we must
+  try possible solutions until we find one that satisfies all the constraints.
+
+  There are many problems that fit this mold. Some examples:
+
+  - Room assignments :: We have /k/ classes that have to be fit into /n/ rooms.
+       Each class can only fit into rooms large enough for it. There are a
+       limited number of time slots available for each room. We must assign
+       classes to rooms so all classes get a time slot and fit in their room.
+  - Graph coloring :: Color each node in a graph with one of /k/ colors, such that
+       no node is connected to another node of the same color. (Includes map
+       coloring.)
+  - Logic programming :: Specify a problem as a set of logical expressions or
+       rules and find values of variables which make the expressions true.
+
+  One prominent example is also a popular puzzle.
+
+  In your assignments repository, open =sudoku/sudoku.pdf= and follow the
+  directions. Under =sudoku/Resources/= is the code you will start from.
+
+  This assignment is a *limited-time offer*: we will only accept pull requests
+  made *in class today*, so submit what you have by 1:30pm.
+
+  You may work in groups, but each of you should submit your own pull request,
+  and you should disclose who you worked with in the pull request.
