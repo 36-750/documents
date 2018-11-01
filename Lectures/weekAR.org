@@ -1,0 +1,46 @@
+#+TITLE: Language Interoperation \\
+#+TITLE: Statistics 650/750 \\
+#+TITLE: Week 10 Thursday
+#+DATE:  01 Nov 2018
+#+AUTHOR: Alex Reinhart and Christopher Genovese
+
+* Announcements
+
+  - Remember the challenge deadlines:
+    - For *650*, Part 2 final revisions must be done by *Tuesday, Nov 13*
+    - For *750*, Part 2 final revisions must be done by *Tuesday, Nov 6*
+
+* reticulate
+
+  #+INCLUDE: "../Topics/reticulate.org" :minlevel 2
+
+* rpy2
+
+  #+INCLUDE: "../Topics/rpy2.org" :minlevel 2
+
+* Cython
+
+  #+INCLUDE: "../Topics/cython.org" :minlevel 2
+
+* rcpp
+
+  #+INCLUDE: "../Topics/rcpp.org" :minlevel 2
+
+* Extras                                                                                          :noexport:ARCHIVE:
+
+#+OPTIONS: H:3 num:nil toc:nil
+#+LATEX_HEADER: \usepackage[margin=0.75in]{geometry}
+
+# Local Variables:
+# org-latex-packages-alist: (("" "tikz" t) ("" "tabu" nil) ("" "minted" nil))
+# org-latex-minted-options:(("mathescape" "") ("linenos" "") ("numbersep" "5pt") ("gobble" "0") ("frame" "lines") ("framesep" "2mm"))
+# org-latex-listings: minted
+# org-latex-default-table-environment: tabu
+# org-latex-create-formula-image-program: imagemagick
+# org-latex-pdf-process: ("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f" "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f" "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f")
+# org-image-actual-width: nil
+# org-hide-emphasis-markers: t
+# org-export-filter-strike-through-functions: (my/latex-strike-through-filter)
+# End:
+
+

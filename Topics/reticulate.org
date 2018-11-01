@@ -1,0 +1,115 @@
+
+The [[https://cran.r-project.org/package=reticulate][reticulate]] package for R provides a bridge between R and Python: it allows R
+code to call Python functions and load Python packages. You can even use Python
+code in an RMarkdown document in RStudio.
+
+Calling Python code in R is a bit tricky. If I make an R data frame and want to
+give it to a Python function, how can the Python function manipulate the data
+frame? If a Python function returns a tuple, how does the R code access a tuple
+if tuples are not an R data type?
+
+=reticulate= solves these problems with automatic conversions. An R data frame is
+given to Python code as a Pandas data frame; a named list (like =list(a=4, b=2,
+c=3)= is passed to Python as a dictionary; an R matrix is turned into a Numpy
+array. The conversions work in the other direction as well: when Python returns
+a tuple, it's turned into an R list; a Pandas data frame is turned back into an
+R data frame.
+
+The [[https://cran.r-project.org/web/packages/reticulate/vignettes/calling_python.html][introductory vignette]] gives plenty of examples. Let's try a couple.
+
+* Basic Usage
+
+  With =reticulate=, we can import ordinary Python packages and do things with
+  them:
+
+  #+BEGIN_SRC R
+    library(reticulate)
+
+    os <- import("os")
+    os$listdir("/Users/alexreinhart/Desktop")
+
+  #+END_SRC
+
+  #+RESULTS:
+  | .Rhistory  |
+  | .DS_Store  |
+  | .localized |
+  | foo.R      |
+
+  This is equivalent to:
+
+  #+BEGIN_SRC python
+    import os
+
+    os.listdir("/Users/alexreinhart/Desktop")
+  #+END_SRC
+
+  We can do fancier things like
+
+  #+BEGIN_SRC R
+    library(reticulate)
+
+    np <- import("numpy")
+
+    a <- np$arange(4)
+    a * 2
+  #+END_SRC
+
+  #+RESULTS:
+  | 0 |
+  | 2 |
+  | 4 |
+  | 6 |
+
+  You can run entire Python scripts or bits of code and then access their results:
+
+  #+BEGIN_SRC R
+    library(reticulate)
+
+    py_run_file("some_script.py")
+
+    py_run_string("x = 10")
+
+    py$x  #=> 10
+  #+END_SRC
+
+* RMarkdown
+
+  You can seamlessly use Python and R inside the *same* RMarkdown document. For
+  example, consider this file:
+
+  #+BEGIN_SRC markdown
+    First we load `reticulate`:
+
+    ```{r setup, include=FALSE}
+    library(reticulate)
+    ```
+
+    Then we run some Python code in a Python code block:
+
+    ```{python}
+    import pandas
+
+    flights = pandas.read_csv("flights.csv")
+    flights = flights[flights['dest'] == 'ORD']
+    flights = flights[['carrier', 'dep_delay', 'arr_delay']]
+    flights = flights.dropna()
+    ```
+
+    Then we can read the `flights` variable in R by accessing `py$flights`:
+
+    ```{r, fig.width=7, fig.height=3}
+    library(ggplot2)
+    ggplot(py$flights, aes(x=carrier, y=arr_delay)) + geom_point + geom_jitter()
+    ```
+  #+END_SRC
+
+  The [[https://cran.r-project.org/web/packages/reticulate/vignettes/r_markdown.html][vignette]] has more examples like this.
+
+  (You might need to update your knitr package to the latest version for this to
+  work.)
+
+* Resources
+
+  - The [[https://cran.r-project.org/package=reticulate][reticulate package]] has documentation vignettes introducing it, showing
+    how to use packages, and showing how to use Python in RMarkdown.
