@@ -5,8 +5,8 @@
 #+AUTHOR: Christopher Genovese and Alex Reinhart
 
 * Announcements
-  - 
-  - 
+  - Lecture notes available =documents/Lectures/weekBT.*=.
+  - Challenge milestone Tue 13 Nov: Part 2 revisions (650), Part 3 (750)
   - 
 
 * Introduction: Dynamic Programming
@@ -489,6 +489,8 @@
    and so on.
 
    #+begin_example
+     Badness: 3242
+     
      What Orbán has done is to squash political competition. He
      has gerrymandered and changed election rules, so that he
      doesn’t need a majority of votes to control the government.
@@ -519,6 +521,23 @@
    =words[i2:i3]=, and so forth of lengths $\ell_j$ that minimize
    $\sum_j {\rm badness}(\ell_j, t)$ for our target line
    length $t$.
+
+   #+begin_example
+     Badness: 692
+
+     What Orbán has done is to squash political competition.
+     He has gerrymandered and changed election rules, so
+     that he doesn’t need a majority of votes to control the
+     government. He has rushed bills through Parliament with
+     little debate. He has relied on friendly media to echo
+     his message and smear opponents. He has stocked the
+     courts with allies. He has overseen rampant corruption.
+     He has cozied up to Putin. To justify his rule,
+     Orbán has cited external threats — especially Muslim
+     immigrants and George Soros, the Jewish Hungarian-born
+     investor — and said that his party is the only one
+     that represents the real people. (David Leonhardt, NYT)
+   #+end_example
 
    What are the subproblems?
 
