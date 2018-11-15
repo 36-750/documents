@@ -1,0 +1,70 @@
+#+TITLE: Peer Code Review \\
+#+TITLE: Statistics 650/750 \\
+#+TITLE: Week 12 Thursday
+#+DATE:  15 Nov 2018
+#+AUTHOR: Alex Reinhart and Christopher Genovese
+
+* Announcements
+
+  1. If you haven't already, follow this link: https://classroom.github.com/a/pcPHciBq
+  2. Open the =challenge-review= repository that was created for you on GitHub,
+     under the name =36-750/challenge-review-YOURUSERNAME=
+  3. Follow the instructions in the =README= posted there.
+  4. Be *constructive*! Make suggestions that can help your partner improve their
+     code, not criticisms that don't give them room to improve.
+
+
+  Your review pairs are below (and also in =documents/Lectures/weekCR.org=). Find
+  /your/ username in the *Reviewer* column, and review the classmate listed in the
+  *Reviewing* column.
+
+  | Challenge           | Reviewer      | Reviewing     |
+  |---------------------+---------------+---------------|
+  | anomaly-speed       | adelbosq      | yiwenx1       |
+  |                     | eganmcclave   | therandomwa   |
+  |                     | therandomwa   | eganmcclave   |
+  |                     | musician-wren | adelbosq      |
+  |                     | yiwenx1       | musician-wren |
+  |---------------------+---------------+---------------|
+  | classification-tree | zhao-david    | JINJINT       |
+  |                     | JINJINT       | zhao-david    |
+  |                     | nakpinar      | tmanole       |
+  |                     | tmanole       | matteobonvini |
+  |                     | matteobonvini | nakpinar      |
+  |                     | danieljunhee  | Rickyzzy      |
+  |                     | Rickyzzy      | danieljunhee  |
+  |                     | daihengg      | jane918       |
+  |                     | anshhirani    | yingzhoh      |
+  |                     | jane918       | daihengg      |
+  |                     | yingzhoh      | anshhirani    |
+  |                     | Ming-Huang    | wengshian1994 |
+  |                     | wengshian1994 | Ming-Huang    |
+  |                     | 2soyoung      | crodrig2      |
+  |                     | crodrig2      | 2soyoung      |
+  |                     | sarahtanjung  | echen19       |
+  |                     | echen19       | wlt423        |
+  |                     | wlt423        | sarahtanjung  |
+  |---------------------+---------------+---------------|
+  | autocomplete-me     | jieunc        | pwu2          |
+  |                     | pwu2          | jieunc        |
+  |                     | alicezh96     | mdivya2003    |
+  |                     | MatthewForte  | paigee234     |
+  |                     | paigee234     | MatthewForte  |
+  |                     | Yudiii        | sungjin0627   |
+  |                     | sungjin0627   | steveh2       |
+  |                     | steveh2       | Yudiii        |
+  |                     | mdivya2003    | alicezh96     |
+  |                     | xinlingl      | little-yoki   |
+  |                     | Timothy-Barry | feyzaakyurek  |
+  |                     | feyzaakyurek  | Timothy-Barry |
+  |                     | JKNA          | omesner       |
+  |                     | little-yoki   | xinlingl      |
+  |                     | omesner       | JKNA          |
+  |---------------------+---------------+---------------|
+  | shazam              | RuiyangGan    | YifanLeng     |
+  |                     | YifanLeng     | RuiyangGan    |
+  |                     | ShenghaoWu    | nmdefries     |
+  |                     | nmdefries     | garthur       |
+  |                     | garthur       | ShenghaoWu    |
+  |                     | StellarTime   | Mantek-Chadha |
+  |                     | Mantek-Chadha | StellarTime   |
