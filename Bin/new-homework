@@ -108,7 +108,7 @@ from contextlib import contextmanager
 from git import Repo
 from git.exc import InvalidGitRepositoryError
 
-__version__ = '0.3.3'
+__version__ = '0.3.4'
 verbose = False
 
 
