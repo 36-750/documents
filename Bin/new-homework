@@ -57,13 +57,14 @@ import os.path
 import re
 import argparse
 import shutil
+import csv
 
 from contextlib import contextmanager
 
 from git import Repo
 from git.exc import InvalidGitRepositoryError
 
-__version__ = '0.3.4'
+__version__ = '0.4.0'
 verbose = False
 
 
@@ -94,24 +95,15 @@ def validate(repo):
     return repo
 
 
-def strictly_validate(repo, name, problem_bank=None):
+def strictly_validate(repo, name):
     """
     Check if repository and branch name are valid according to strict rules.
     These are:
 
-    + name contains only valid characters [-a-zA-Z_0-9.]
-    + name is a recognized assignment (only checked if problem_bank not None)
     + repo has a tag or branch named clean-start
 
     Return a (boolean, string) pair with (valid?, reason).
     """
-
-    if not re.match(r'[-a-zA-Z_0-9]+$', name):
-        return (False, 'invalid characters in assignment name')
-
-    if problem_bank is not None:
-        if not os.path.exists(os.path.join(problem_bank, name + ".pdf")):
-            return (False, 'assignment name does match an existing problem')
 
     if 'clean-start' not in repo.refs:
         return (False, 'repo does not have a ref named clean-start')
@@ -368,6 +360,27 @@ def install_problem(name, hw_dir, problem_bank):
     return installed
 
 
+def get_problem_info(name, problem_bank):
+    """Check if the problem exists in the bank.
+
+    Dies if the problem does not exist. Return a boolean indicating whether the
+    extant problem is a vignette.
+    """
+
+    f = open(os.path.join(problem_bank, "points.csv"), "r")
+    r = csv.reader(f)
+    next(r) # skip header row
+
+    problems = [row[0] for row in r]
+    f.close()
+
+    if problems.count(name) == 0:
+        die("Cannot find an assignment named '{}' in the problem bank.".format(name),
+            "The name must be spelled exactly as in the problem-bank repo.")
+
+    return problems.count(name) > 1
+
+
 # Main Script
 
 parser = argparse.ArgumentParser(description="Prepare repository "
@@ -492,6 +505,9 @@ if repo.is_dirty():
 
 hw_branch, base, hdir_name, sequelp = branch_base_dir_names(repo, aname, args)
 
+problem_bank = check_problem_bank(repo.working_tree_dir, args.problems)
+vignette = get_problem_info(aname, problem_bank)
+
 branch_exists = hw_branch_exists(repo, hw_branch)
 if branch_exists:
     if args.warn_if_exists:
@@ -504,7 +520,6 @@ if branch_exists:
             "To continue, re-run with --warn-if-exists; "
             "see options --no-install and --no-commit.")
 
-problem_bank = check_problem_bank(repo.working_tree_dir, args.problems)
 hw_dir = os.path.join(repo.working_tree_dir, hdir_name)
 
 # Create the branch, install relevant files, and make initial commit
