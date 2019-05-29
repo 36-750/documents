@@ -1,52 +1,7 @@
-#! /bin/bash
+#! /usr/bin/env python
 # -*- mode: python; coding: utf-8 -*-
 
-# This file is used as both a shell script and as a Python script. See e.g.,
-# softwareswirl.blogspot.com/2011/06/starting-python-script-intelligently.html.
-# See __doc__ below for the python script docstring.
-
-""":"
-PYTHON=""
-declare -a candidate_pythons=()
-
-findPythons () {
-  IFS=: read -r -a test_path <<< "$PATH"
-  for dir in "${test_path[@]}"
-  do
-    if [[ -d "$dir" ]]; then
-      while IFS= read -r line; do
-        candidate_pythons+=("$line")
-      done < <(find "$dir" -maxdepth 1 -name "python[2-9].[0-9]")
-    fi
-  done
-
-  for exe in "python3" "python" "python2"
-  do
-    while IFS= read -r line; do
-      if [[ -n "$line" ]]; then
-        candidate_pythons+=("$line")
-      fi
-    done < <(type -p -a "$exe")
-  done
-
-  found="$(for p in "${candidate_pythons[@]}"
-  do
-    echo $("$p" -c 'import platform; print(platform.python_version())')';'$p
-  done | sort -t '.' -gr -k 1,1 -k 2,2 -k 3,3 | head -1)"
-
-  PYTHON="${found#*;}"
-  test -n "$PYTHON"
-}
-
-if ! findPythons ; then
-    echo >&2 "Cannot find an appropriate Python!"
-    exit 1
-fi
-
-exec "$PYTHON" "$0" "$@"
-" """
-
-__doc__ = """new-homework -- Prepare repository for a new homework assignment
+"""new-homework -- Prepare repository for a new homework assignment
 
 This utility carries out all the steps required to initialize a new
 assignment in your homework repository, including:
