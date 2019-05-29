@@ -262,7 +262,7 @@ def branch_base_dir_names(repo, name, options):
     Parameters:
     + repo    -- homework repository (to find branch names)
     + name    -- assignment name as given on the command line
-    + options -- command line options setttings
+    + options -- command line options settings
 
     Return tuple (branch_name, base_name, doc_name, auto-sequel-branch?)
     """
@@ -319,7 +319,8 @@ def check_problem_bank(repo_dir, problem_base):
 
     if not problem_bank or not os.access(problem_bank, os.R_OK):
         problem_bank = ''
-        log("Cannot find problem bank repository; see --problems option.")
+        die("Cannot find problem-bank repository; see --problems option."
+            "The problem-bank should be in the same directory as your assignments repository.")
 
     return problem_bank
 
@@ -377,7 +378,7 @@ parser.add_argument("-a", "--auto",
                     default=False,
                     action='store_true',
                     help="Derive --base and branch names from assignment name. "
-                    "If -name is also suppled, an error is issued."
+                    "If --name is also supplied, an error is issued."
                     "Given name, branch will be name-N, where N is the smallest "
                     "integer>=1 such that there is no name-N branch already, "
                     "and base will be the previous existing name-M or the value "
@@ -477,16 +478,17 @@ cwd = os.getcwd()
 # Find and check the homework repository
 repo = find_repo(args.repo, args.guess_repo, cwd)
 if repo is None:
-    die("Could not find a valid homework repository.")
+    die("Could not find a valid assignments repository.",
+        "Are you running this command from inside your assignments repository?")
 
 valid, why = strictly_validate(repo, aname) if not args.skip_checks else (True, '')
 if not valid:
-    die("Repository {0} fails strict validity checks ({1}).".format(repo, why),
+    die("Repository '{0}' fails strict validity checks ({1}).".format(repo.working_tree_dir, why),
         "If this is assessment incorrect, consider using --skip-checks.")
 
 if repo.is_dirty():
     die("Your repository has uncommitted changes; ",
-        "You must commit or stash all changes before creating a new branche.")
+        "You must commit or stash all changes before creating a new branch.")
 
 hw_branch, base, hdir_name, sequelp = branch_base_dir_names(repo, aname, args)
 
