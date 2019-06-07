@@ -353,6 +353,43 @@ def install_problem(name, hw_dir, problem_bank):
     return installed
 
 
+def safe_assignment_name(name):
+    """Convert an assignment name into one safe to use as a filename.
+
+    This is used for template files, e.g. unit testing and source files. The
+    primary concern is that assignment names contain hyphens, but filenames with
+    hyphens cannot be imported in Python.
+    """
+
+    return name.replace("-", "_").strip()
+
+
+def install_template(language, hdir_name):
+    """Install a template into the repository.
+
+    The template contains a source file and a unit test file, with correct names
+    so the student can easily run tests and so CI knows how to find the tests.
+    """
+
+    if language == "none":
+        return
+
+    template_dir = os.path.join(".skel", language.lower())
+
+    if not os.path.exists(template_dir):
+        die("No template exists for --language={}".format(language))
+
+    safename = safe_assignment_name(hdir_name)
+
+    for dirpath, _, filenames in os.walk(template_dir):
+        for filename in filenames:
+            contents = open(os.path.join(dirpath, filename), "r").read().replace("ASSIGN", safename)
+
+            open(os.path.join(hdir_name,
+                              filename.replace("ASSIGN", safename)), "w").write(contents)
+
+
+
 def get_problem_info(name, problem_bank):
     """Check if the problem exists in the bank.
 
@@ -438,6 +475,11 @@ parser.add_argument("-w", "--warn-if-exists",
                     action='store_true',
                     help="Warn without failure if homework branch already exists.")
 
+parser.add_argument("language",
+                    help="Language you will use for the assignment. "
+                    "The script will install a simple template for that language, "
+                    "if it is supported and --no-install is not passed. Valid "
+                    "options are 'r', 'python', or 'none' to install no template.")
 
 parser.add_argument("assignment",
                     type=str,
@@ -499,6 +541,8 @@ with cd(repo.working_tree_dir):
             files = install_problem(hdir_name, hw_dir, problem_bank)
             log('Installed files: {}'.format(", ".join(files)))
 
+            install_template(args.language, hdir_name)
+
         if not args.no_commit:
             # Add a clean initial commit on the branch with the installed files
             try:
@@ -506,7 +550,7 @@ with cd(repo.working_tree_dir):
             except OSError as err:
                 print(err.filename, err.errno)
                 die("Cannot stage installed files in repository", err)
-            repo.index.commit("Files installed to start work on {}".format(hdir_name))
+            repo.index.commit("{}".format(hw_branch))
             log("Committing initial state of work on branch {}.".format(hw_branch))
     else:
         log("Sequel branch {} created off branch {}.".format(hw_branch, base))
