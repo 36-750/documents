@@ -1,34 +1,27 @@
 #! /usr/bin/env python
 # -*- mode: python; coding: utf-8 -*-
 
-"""new-homework -- Prepare repository for a new homework assignment
+"""new-homework -- Start a new homework assignment
 
-This utility carries out all the steps required to initialize a new
-assignment in your homework repository, including:
+Install a new homework assignment in your assignments repository, by:
 
-1. Creating a subdirectory for the assignment in the homework repository
+1. Creating a directory for the assignment in the homework repository
 2. Installing the problem description and relevant files into that directory
 3. Creating a new branch for the assignment off the correct base
 4. Checking out that branch
-5. Doing an initial commit on that branch with the basic assignment files
+5. Commit the basic assignment files to that branch
 
-In a typical workflow, one runs this from within the homework respository,
-where the problem bank repository is a sibling directory (a child of
-the homework repository's parent directory). Then it suffices to
-issue the command
+Run this command from within the homework repository, where the problem bank
+repository is a sibling directory (a child of the homework repository's parent
+directory). Then it suffices to issue the command
 
-    new-homework name
+    new-homework hw-name
 
-for a standalone assignment or
+where hw-name is the assignment name (all lower case, no file extension) as
+specified in the problem bank.
 
-    new-homework -a name
-
-for a vignette exercise or challenge part, where name is the
-assignment name (all lower case, no file extension) as specified in
-the problem bank. The -a (--auto) argument here sets the branch name
-to name-N based on the previous name-M branch, if any. If you also
-supply -x (--suffix) you can specify a larger number, such as when
-skipping vignette exercises. To avoid reinstalling description and
+For vignettes, if you also supply -x (--suffix) you can specify a larger number,
+such as when skipping vignette exercises. To avoid reinstalling description and
 resource files in later parts, you can add --no-install.
 
 More generally, the homework repository and problem-bank locations can
@@ -41,13 +34,11 @@ For the latter, you can enter lines like one or both of
 
 in your bash .profile file.
 
-Ordinarily, the script will exit with an error if the assignment
-branch already exists, but that can be overridden with
---warn-if-exists. It also makes a stringent check on the repository
-to ensure that it is indeed a homework repository. You can loosen
-the checks with the --skip-checks option. You can also control
-whether files are installed and whether the initial commit is made.
-See the --help summary.
+Ordinarily, the script will exit with an error if the assignment branch already
+exists, but that can be overridden with --warn-if-exists. It also makes a
+stringent check on the repository to ensure that it is indeed a homework
+repository. You can also control whether files are installed and whether the
+initial commit is made.
 
 """
 
@@ -125,11 +116,12 @@ def try_repo(maybe_dir, message="Using"):
 
 def guess_repo(starting_dir):
     """Try to find an assignment repo, looking near starting_dir and guessing.
+
     A matching directory has a name assignments-* and is a git repository.
     The search order is starting_dir, then directories in starting_dir,
     its parents, its grandparents, ~/s750, ~s650.
-
     """
+
     home = os.environ['HOME']
     hw_re = re.compile(r'^assignments-')
     guess_dirs = [os.path.abspath(starting_dir),
@@ -162,6 +154,7 @@ def guess_repo(starting_dir):
 
 def find_repo(maybe_repo, guess, cwd):
     """Find the assignments respository starting from an initial candidate.
+
     May check environment variable X50_HW_REPO for the repository location.
 
     Parameters:
@@ -195,7 +188,7 @@ def hw_branch_exists(repo, name):
     return False
 
 
-def auto_branch_name(repo, name, suffix):
+def auto_branch_name(repo, name, suffix=None):
     """Find the name for an automatically generated vignette branch name.
 
     If a branch matching name or name with a suffix "-n" for some integer
@@ -206,71 +199,71 @@ def auto_branch_name(repo, name, suffix):
 
     If no matching branch is found, the branch name is of the form name-1.
 
-    Returns a triple containing the computed branch name, the base
-    branch name to which the new branch is a sequel (or None
-    otherwise), and a boolean indicating whether the returned branch
-    name represents a sequel to an existing branch.
-
+    Returns a tuple containing the computed branch name, the base branch name to
+    which the new branch is a sequel (or None otherwise), the exercise number,
+    and a boolean indicating whether the returned branch name represents a
+    sequel to an existing branch.
     """
+
     branch_rx = re.compile(r'(' + name + r')(?:-(\d+))?$', flags=re.IGNORECASE)
     prev = []
     base_name = None
-    untagged = False  # branch with untagged name already exists
+    exercise_no = None
+
     for b in repo.branches:
         m = re.match(branch_rx, b.name)
         if m and m.group(2):
             prev.append((b.name, m.group(1), int(m.group(2))))
-        elif m:
-            untagged = b.name
+
     if prev:
         base_name, root, M = sorted(prev, key=lambda x: x[2], reverse=True)[0]
+
         if suffix is None or suffix == 0:
-            hw_name = root + "-" + str(M+1)
+            exercise_no = M + 1
         elif suffix > M:
-            hw_name = root + "-" + str(suffix)
+            exercise_no = suffix
         else:
             die("When given, --suffix {} must exceed max branch suffix {}."
                 .format(suffix, M))
+        hw_name = root + "-" + str(exercise_no)
         sequel = True
         log("On auto, detected previous branch {}, adding {}"
             .format(base_name, hw_name))
-    elif untagged:
-        if suffix is None or suffix == 0:
-            hw_name = untagged + '-2'
-        else:  # -1 ok in this case but not preferred
-            hw_name = untagged + '-' + str(suffix)
-        base_name = untagged
-        sequel = True
     else:
         hw_name = name + '-1'
+        exercise_no = 1
+        base_name = "master"
         sequel = False
 
-    return (hw_name, base_name, sequel)
+    return (hw_name, base_name, exercise_no, sequel)
 
 
-def branch_base_dir_names(repo, name, options):
+def branch_base_dir_names(repo, name, base, is_vignette, num_parts):
     """Set the names for the hw branch, base branch, and hw documents/directory.
 
     Parameters:
-    + repo    -- homework repository (to find branch names)
-    + name    -- assignment name as given on the command line
-    + options -- command line options settings
+    + repo        -- homework repository (to find branch names)
+    + name        -- assignment name as given on the command line
+    + base        -- base branch/tag to branch from
+    + is_vignette -- is this a vignette?
+    + num_parts   -- number of parts in the vignette (1 for stand-alones)
 
     Return tuple (branch_name, base_name, doc_name, auto-sequel-branch?)
     """
-    hw_name, base_name, hdir_name = (name, options.base or 'master', name)
+
+    hw_name, base_name, hdir_name = (name, base, name)
     sequel = False  # Are we building on a previous exercise/branch?
 
-    if options.auto and options.name:
-        die("Cannot give --auto and --name together.")
-    elif options.name:
-        hdir_name = options.name or hdir_name
-    elif options.auto:  # derive sequel branch from previous with same root
-        hw_name, new_base, sequel = auto_branch_name(repo, name, options.suffix)
-        base_name = new_base or base_name
+    if is_vignette:
+        hw_name, base_name, exercise_no, sequel = auto_branch_name(repo, name)
 
-    log("Calculated names for branch {}, base {}, dirs {}"
-        .format(hw_name, base_name, hdir_name))
+        if exercise_no > num_parts:
+            die("The vignette {} only has {} exercises; cannot create a branch ".format(name, num_parts),
+                "for non-existent exercise {}.".format(exercise_no))
+
+
+    log("Calculated names for branch {}, base {}, dirs {}; is_vignette={}"
+        .format(hw_name, base_name, hdir_name, is_vignette))
     return (hw_name, base_name, hdir_name, sequel)
 
 
@@ -363,8 +356,9 @@ def install_problem(name, hw_dir, problem_bank):
 def get_problem_info(name, problem_bank):
     """Check if the problem exists in the bank.
 
-    Dies if the problem does not exist. Return a boolean indicating whether the
-    extant problem is a vignette.
+    Dies if the problem does not exist. Return a tuple:
+    (is-vignette?, num-parts)
+    where non-vignettes have only 1 part.
     """
 
     f = open(os.path.join(problem_bank, "points.csv"), "r")
@@ -374,38 +368,28 @@ def get_problem_info(name, problem_bank):
     problems = [row[0] for row in r]
     f.close()
 
-    if problems.count(name) == 0:
+    count = problems.count(name)
+
+    if count == 0:
         die("Cannot find an assignment named '{}' in the problem bank.".format(name),
             "The name must be spelled exactly as in the problem-bank repo.")
 
-    return problems.count(name) > 1
+    return count > 1, count
 
 
 # Main Script
 
-parser = argparse.ArgumentParser(description="Prepare repository "
-                                 "for a new homework assignment.",
+parser = argparse.ArgumentParser(description="Install a new homework "
+                                 "assignment to the repository.",
                                  formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=__doc__[__doc__.index('\n'):])
-parser.add_argument("-a", "--auto",
-                    default=False,
-                    action='store_true',
-                    help="Derive --base and branch names from assignment name. "
-                    "If --name is also supplied, an error is issued."
-                    "Given name, branch will be name-N, where N is the smallest "
-                    "integer>=1 such that there is no name-N branch already, "
-                    "and base will be the previous existing name-M or the value "
-                    "of base or master if none. Use --suffix to set N (but not M).")
 
 parser.add_argument("-b", "--base",
                     type=str,
                     default='',
                     help="Starting point at which to create the new assignment branch. "
-                    "Defaults to master, the tip of the master branch. This option is "
-                    "used primarily for assignments that build on previous assignments,"
-                    "like vignette exercies or challenge parts after the first."
-                    "If --auto is supplied this is used for the base of the first "
-                    "branch in the chain and ignored otherwise.")
+                    "Defaults to master, the tip of the master branch. Useful if you "
+                    "need to manually set up a vignette.")
 
 parser.add_argument("-g", "--guess-repo",
                     default=False,
@@ -413,14 +397,6 @@ parser.add_argument("-g", "--guess-repo",
                     help="If no repo is specified on the command line or in the "
                     "environment, attempt to find it nearby or in a few likely "
                     "directories below the user's HOME.")
-
-parser.add_argument("-n", "--name",
-                    type=str,
-                    default='',
-                    help="Name to use for document basename and homework directory "
-                    "if --auto/--suffix are not sufficient and if this "
-                    "name should be different from the assignment branch name."
-                    "An error is issued if --auto is supplied; --suffix ignored.")
 
 parser.add_argument("--no-commit",
                     default=False,
@@ -442,16 +418,10 @@ parser.add_argument("-p", "--problems",
 parser.add_argument("-r", "--repo",
                     type=str,
                     default="",
-                    help="Path of assignments repository directory. "
+                    help="Path to assignments repository directory. "
                     "If not supplied, use the value of environment variable "
                     "X50_HW_REPO if defined, or a guessed directory if -g option"
                     "is supplied, or the current directory otherwise.")
-
-parser.add_argument("-s", "--skip-checks",
-                    default=False,
-                    action='store_true',
-                    help="Skip the more stringent checks on whether the "
-                    "assignments repository is valid.")
 
 parser.add_argument("-v", "--verbose",
                     default=False,
@@ -468,13 +438,6 @@ parser.add_argument("-w", "--warn-if-exists",
                     action='store_true',
                     help="Warn without failure if homework branch already exists.")
 
-parser.add_argument("-x", "--suffix",
-                    default=0,
-                    type=int,
-                    help="With --auto, integer suffix for the branch name."
-                    "Given assignment name, --base will be the largest name-M "
-                    "and branch will be name-N where N is given here. It is an "
-                    "error if N <= M.")
 
 parser.add_argument("assignment",
                     type=str,
@@ -494,7 +457,7 @@ if repo is None:
     die("Could not find a valid assignments repository.",
         "Are you running this command from inside your assignments repository?")
 
-valid, why = strictly_validate(repo, aname) if not args.skip_checks else (True, '')
+valid, why = strictly_validate(repo, aname)
 if not valid:
     die("Repository '{0}' fails strict validity checks ({1}).".format(repo.working_tree_dir, why),
         "If this is assessment incorrect, consider using --skip-checks.")
@@ -503,10 +466,13 @@ if repo.is_dirty():
     die("Your repository has uncommitted changes; ",
         "You must commit or stash all changes before creating a new branch.")
 
-hw_branch, base, hdir_name, sequelp = branch_base_dir_names(repo, aname, args)
-
+# Sanity-check the problem bank and the assignment they requested.
 problem_bank = check_problem_bank(repo.working_tree_dir, args.problems)
-vignette = get_problem_info(aname, problem_bank)
+is_vignette, num_parts = get_problem_info(aname, problem_bank)
+
+hw_branch, base, hdir_name, sequelp = \
+    branch_base_dir_names(repo, aname, args.base or "master", is_vignette,
+                          num_parts)
 
 branch_exists = hw_branch_exists(repo, hw_branch)
 if branch_exists:
@@ -546,7 +512,13 @@ with cd(repo.working_tree_dir):
         log("Sequel branch {} created off branch {}.".format(hw_branch, base))
         log("No commit made on sequel branch {}.".format(hw_branch))
 
-print("Switched to branch {} for assignment {}.\n"
-      "Type 'cd {}' at the shell prompt, and you are ready to work!"
-      .format(hw_branch, hdir_name, os.path.relpath(hw_dir, cwd)),
-      file=sys.stderr)
+if is_vignette:
+    print("Switched to branch '{}' for vignette '{}'.\n"
+          "Type 'cd {}' at the shell prompt, and you are ready to work!"
+          .format(hw_branch, hdir_name, os.path.relpath(hw_dir, cwd)),
+          file=sys.stderr)
+else:
+    print("Switched to branch {} for assignment {}.\n"
+          "Type 'cd {}' at the shell prompt, and you are ready to work!"
+          .format(hw_branch, hdir_name, os.path.relpath(hw_dir, cwd)),
+          file=sys.stderr)
