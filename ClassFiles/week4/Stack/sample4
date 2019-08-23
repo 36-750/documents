@@ -1,4 +1,0 @@
-41 inc inc dec 'a def   ;; Define a variable
-a 'the-answer-is        ;; Print an string of sorts
-print pop print
-
