@@ -1,0 +1,89 @@
+#+TITLE: Getting updates to your assignments repository
+
+We provided each of you with an assignments repository with some built-in
+features, like the =new-homework= script and some setup to automatically run your
+unit tests when you submit homework.
+
+Unfortunately, some of this was broken. It would mistakenly report errors
+whenever you submit homework, because if you wrote your homework in Python, it
+would fail to find R unit tests, and if you wrote your homework in R, it would
+fail to find Python unit tests.
+
+I've fixed these problems, but it requires you to pull the changes I made into
+your repository. Here's how.
+
+** Step 1: Checkout master branch
+
+   At your terminal, go to your =assignments-YOURUSERNAME= folder and switch to
+   the master branch:
+
+   #+BEGIN_SRC bash
+     cd ~/s750/assignments-YOURUSERNAME
+
+     git checkout master # Should be on the master branch
+     git status
+   #+END_SRC
+
+   It should tell you "On branch master" and "nothing to commit".
+
+   If it refuses to let you switch branch to master, you were probably working
+   on something you haven't committed yet.
+
+** Step 2: Setup a new remote
+
+   Now that you are on the master branch, we will add a new repository that we
+   can pull changes from, including fixes to the bugs:
+
+   #+BEGIN_SRC bash
+     git remote add template https://github.com/36-750/assignment-template.git
+     git remote -v
+   #+END_SRC
+
+   This should display a list that includes the lines
+
+   #+BEGIN_EXAMPLE
+     template	https://github.com/36-750/assignment-template.git (fetch)
+     template	https://github.com/36-750/assignment-template.git (push)
+   #+END_EXAMPLE
+
+   If the above is displayed for you, then proceed to the next step.
+   If not, please talk to us.
+
+** Step 3: Pull down commits from the remote
+
+   Now run the following command:
+
+   #+BEGIN_SRC bash
+     git pull template master
+   #+END_SRC
+
+  It will print out messages showing that it's updated several files, including
+  =.drone.yml= and =.ci/run-tests.R=.
+
+** Step 4: Sync changes to origin branch
+
+   Now that you have pulled down changes to your master branch you can
+   push the changes to GitHub:
+
+   #+BEGIN_SRC bash
+     git push origin master
+   #+END_SRC
+
+** Step 5: update all your other branches
+
+   If you have another assignment branch, e.g. =system-setup,= you can run
+   the following:
+
+   #+BEGIN_SRC bash
+     git checkout system-setup
+   #+END_SRC
+
+   And now simply merge the changes from master by running this
+   command
+
+   #+BEGIN_SRC bash
+     git merge master
+   #+END_SRC
+
+   Keep working on your assignment and submit using usual instructions
+   when you are ready
