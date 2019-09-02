@@ -29,6 +29,15 @@ your repository. Here's how.
    If it refuses to let you switch branch to master, you were probably working
    on something you haven't committed yet.
 
+   If you have already submitted a homework assignment and had it approved, you
+   should now run
+
+   #+BEGIN_SRC bash
+     git pull origin master
+   #+END_SRC
+
+   so that your =master= branch is updated with the merged homework.
+
 ** Step 2: Setup a new remote
 
    Now that you are on the master branch, we will add a new repository that we
@@ -60,30 +69,16 @@ your repository. Here's how.
   It will print out messages showing that it's updated several files, including
   =.drone.yml= and =.ci/run-tests.R=.
 
-** Step 4: Sync changes to origin branch
+** Step 4: Done!
 
-   Now that you have pulled down changes to your master branch you can
-   push the changes to GitHub:
+   You're now done.
 
-   #+BEGIN_SRC bash
-     git push origin master
-   #+END_SRC
+   Note that GitHub will *not* allow you to push your =master= branch to GitHub. We
+   don't allow this to ensure you don't accidentally commit homework directly to
+   =master= without having it graded and approved first. (This has happened in the
+   past.)
 
-** Step 5: update all your other branches
-
-   If you have another assignment branch, e.g. =system-setup,= you can run
-   the following:
-
-   #+BEGIN_SRC bash
-     git checkout system-setup
-   #+END_SRC
-
-   And now simply merge the changes from master by running this
-   command
-
-   #+BEGIN_SRC bash
-     git merge master
-   #+END_SRC
-
-   Keep working on your assignment and submit using usual instructions
-   when you are ready
+   This means that when you do your next homework assignment and submit it, the
+   pull request on GitHub will show two extra commits -- the two commits I made
+   to fix bugs. *That's fine!* Those will get merged into the =master= branch on
+   GitHub when the TAs grade and approve your submission.
