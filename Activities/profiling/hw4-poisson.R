@@ -119,7 +119,7 @@ pois.barrier.hess <- function(y, X, lower, upper) {
 find.x0 <- function(X, lower, upper) {
     rows <- nrow(X)
     cols <- ncol(X)
-    f.con <- rBind(X, X)
+    f.con <- rbind(X, X)
     f.obj <- rep(0, ncol(f.con))
     f.dir <- c(rep(">=", rows), rep("<=", rows))
     f.rhs <- c(lower + 0.01, upper - 0.01)
