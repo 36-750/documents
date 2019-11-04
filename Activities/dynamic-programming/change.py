@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3
+#!/usr/local/bin/python
 
 #
 # Code for solving the making change dynamic programming problem.
@@ -29,7 +29,7 @@ def all_coin_sets(denominations, size, always_penny=True):
                    subsets(set(denominations) - set([1]), size - 1))
     else:
         return subsets(set(denominations), size)
-    
+
 def make_change(denominations, num_coins, weights=[1]*MAX_CENTS,
                 intuitive=False, always_penny=True):
     """Find a set of coins that minimizes expected purchase number.
@@ -67,7 +67,7 @@ def make_change(denominations, num_coins, weights=[1]*MAX_CENTS,
 
     best_change[0] = None
     return (best_average, best_coins, best_change)
-            
+
 def best_change_with(coin_set, intuitive=False):
     """
     Computes the most efficient change from a given coin set for each cost.
@@ -119,12 +119,12 @@ def best_change_with(coin_set, intuitive=False):
             best[target] = sorted(best_change)
         else:
             best[target] = None
-        
+
     return best
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser() 
-    
+    parser = argparse.ArgumentParser()
+
     parser.add_argument("-c", "--coins", dest="num_coins",
                         type=int, action="store", default=3,
                         help="Number of coins to consider [default: 3].")
@@ -132,12 +132,12 @@ if __name__ == "__main__":
                         action="store_false", default=True,
                         help="Set if pennies need not be included in the coin"
                              " set [default: False]")
-    
+
     parser.add_argument("-i", "--intuitive", action="store_true", default=False,
                         help="Require an intuitive solution")
     # ATTN: add option for weights to be read from a file, default uniform
     #       just use uniform for now
-    
+
     args = parser.parse_args()
     denominations = tuple(range(1,MAX_CENTS))
 
@@ -151,4 +151,3 @@ if __name__ == "__main__":
     for cost, best_change in enumerate(change):
         if cost > 0:
             print('    {} {}'.format(cost, best_change))
-
