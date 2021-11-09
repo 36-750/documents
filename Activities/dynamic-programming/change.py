@@ -1,10 +1,10 @@
 #!/usr/local/bin/python
 
-#
-# Code for solving the making change dynamic programming problem.
-# Based on the puzzle: "Small Change for Mujikhistan" in
-# /Doctor Ecco's Cyberpuzzles/ by Dennis E. Shasha
-#
+"""
+Code for solving the making change dynamic programming problem.
+Based on the puzzle: "Small Change for Mujikhistan" in
+/Doctor Ecco's Cyberpuzzles/ by Dennis E. Shasha
+"""
 
 import sys
 import argparse
@@ -13,7 +13,7 @@ from itertools import combinations, chain
 MAX_CENTS = 100
 
 def subsets(iter, r):
-    return map(set, combinations(iter,r))
+    return map(set, combinations(iter, r))
 
 def all_coin_sets(denominations, size, always_penny=True):
     """Iterator over all coin sets of specified size with allowed denominations.
@@ -24,13 +24,14 @@ def all_coin_sets(denominations, size, always_penny=True):
 
     Returns an iterator/map object over coin sets.
     """
+
     if always_penny:
         return map(lambda s: s.union([1]),
                    subsets(set(denominations) - set([1]), size - 1))
     else:
         return subsets(set(denominations), size)
 
-def make_change(denominations, num_coins, weights=[1]*MAX_CENTS,
+def make_change(denominations, num_coins, weights=[1] * MAX_CENTS,
                 intuitive=False, always_penny=True):
     """Find a set of coins that minimizes expected purchase number.
 
@@ -44,6 +45,7 @@ def make_change(denominations, num_coins, weights=[1]*MAX_CENTS,
     the minimizing coin set, and the change made for each purchase cost.
     The latter is a list whose 0th index is None for easy indexing by cost.
     """
+
     best_coins = None
     best_change = None
     best_average = MAX_CENTS
@@ -56,6 +58,7 @@ def make_change(denominations, num_coins, weights=[1]*MAX_CENTS,
         for total in range(1, MAX_CENTS):
             average += weights[total] * len(change[total])
             denomin += weights[total]
+
         average = average / denomin
 
         if average < best_average:
@@ -63,10 +66,9 @@ def make_change(denominations, num_coins, weights=[1]*MAX_CENTS,
             best_coins = coin_set
             best_change = change[:]
 
-        #print('{}: {} <- {}'.format(coin_set, best_average, best_coins), file=sys.stderr)
-
     best_change[0] = None
-    return (best_average, best_coins, best_change)
+
+    return best_average, best_coins, best_change
 
 def best_change_with(coin_set, intuitive=False):
     """
@@ -87,9 +89,10 @@ def best_change_with(coin_set, intuitive=False):
     sentinel = range(MAX_CENTS)
     for i in range(min_coin):
         best[i] = sentinel
+
     best[min_coin] = [min_coin]
 
-    for target in range(min_coin+1,MAX_CENTS):
+    for target in range(min_coin + 1, MAX_CENTS):
         if intuitive:
             change = []
             total = target
@@ -108,10 +111,14 @@ def best_change_with(coin_set, intuitive=False):
 
             for c in coin_set:
                 if target > c and best[target - c] is not None:
+                    # [:] creates a copy, so that change.append does not change
+                    # the values stored in best
                     change = best[target - c][:]
                     change.append(c)
+
                     if len(change) < len(best_change):
                         best_change = change
+
                 elif target == c:
                     best_change = [c]
 
@@ -139,7 +146,7 @@ if __name__ == "__main__":
     #       just use uniform for now
 
     args = parser.parse_args()
-    denominations = tuple(range(1,MAX_CENTS))
+    denominations = tuple(range(1, MAX_CENTS))
 
     average, coins, change = make_change(denominations, args.num_coins,
                                          intuitive=args.intuitive,
