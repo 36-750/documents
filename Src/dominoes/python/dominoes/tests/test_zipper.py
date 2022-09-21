@@ -1,4 +1,4 @@
-import dominoes.zipper as Zip
+from ..zipper import zipper, node, root, up, down, left, right, leftmost, rightmost
 
 from pyrsistent  import pmap, pvector, m, v, PMap, PVector
 from typing      import Annotated, Any, Callable, Generic, Mapping, NamedTuple, NewType, TypeVar, Union
@@ -16,27 +16,27 @@ def mn(node: Node, children: list[Node]) -> Node:
 
 def test_basic_zipper_moves():
     data = [[1, 2, [3, 30, [300]]], 4, 5]
-    z = Zip.zipper(is_br, cs, mn, data)
-    zd2d = Zip.down(Zip.down(z), 2)
+    z = zipper(is_br, cs, mn, data)
+    zd2d = down(down(z), 2)
 
-    out = Zip.node(zd2d)
+    out = node(zd2d)
     assert out == [3, 30, [300]]
-    assert Zip.node(Zip.left(zd2d)) == 2
-    assert Zip.node(Zip.right(Zip.left(zd2d))) == out
-    assert Zip.node(Zip.leftmost(zd2d)) == 1
-    assert Zip.node(Zip.rightmost(Zip.up(zd2d))) == 5
+    assert node(left(zd2d)) == 2
+    assert node(right(left(zd2d))) == out
+    assert node(leftmost(zd2d)) == 1
+    assert node(rightmost(up(zd2d))) == 5
 
-    out = Zip.node(Zip.down(zd2d, 2))
+    out = node(down(zd2d, 2))
     assert out == [300]
-    assert Zip.root(Zip.down(zd2d, 2)) == data
+    assert root(down(zd2d, 2)) == data
 
-    out = Zip.node(Zip.down(Zip.down(zd2d, 2)))
+    out = node(down(down(zd2d, 2)))
     assert out == 300
 
-    out = Zip.node(Zip.up(Zip.down(zd2d, 2)))
+    out = node(up(down(zd2d, 2)))
     assert out == [3, 30, [300]]
 
-    out = Zip.node(Zip.down(z, 1))
+    out = node(down(z, 1))
     assert out == 4
 
 

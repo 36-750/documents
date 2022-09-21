@@ -23,7 +23,7 @@ extra-source-files: CHANGELOG.md
 
 executable dominoes
     hs-source-dirs:   app
-    main-is:          dominoes.hs
+    main-is:          Dominoes.hs
     other-modules:
         DominoPool
         InputParser
@@ -79,9 +79,21 @@ test-suite dominoes-test
     type:                exitcode-stdio-1.0
     hs-source-dirs:      test, app
     main-is:             Spec.hs
+    other-modules:       DominoPool
+                         InputParser
+                         SearchTree
+                         Objectives
+                         DominoesSpec
     build-depends:       base
+                       , containers
                        , hspec
                        , QuickCheck
+                       , text-conversions
+                       , text
+                       , containers
+                       , megaparsec
+                       , parser-combinators
+                       , optparse-applicative
     default-language:    Haskell2010
     ghc-options:         -Wall
                          -Wcompat
@@ -95,3 +107,29 @@ test-suite dominoes-test
                          -threaded
                          -rtsopts
                          -with-rtsopts=-N
+    build-tool-depends: hspec-discover:hspec-discover ^>= 2.10.0
+    default-extensions: BangPatterns
+                        ConstraintKinds
+                        DeriveFoldable
+                        DeriveFunctor
+                        DeriveGeneric
+                        DeriveLift
+                        DeriveTraversable
+                        DerivingStrategies
+                        EmptyCase
+                        FlexibleContexts
+                        FlexibleInstances
+                        GeneralizedNewtypeDeriving
+                        InstanceSigs
+                        KindSignatures
+                        LambdaCase
+                        MultiParamTypeClasses
+                        MultiWayIf
+                        NamedFieldPuns
+                        OverloadedStrings
+                        RankNTypes
+                        ScopedTypeVariables
+                        StandaloneDeriving
+                        TupleSections
+                        TypeOperators
+                        TypeApplications

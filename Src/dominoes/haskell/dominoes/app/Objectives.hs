@@ -1,8 +1,12 @@
 -- Objectives for building and optimizing the search tree
 
-module Objectives where
+module Objectives ( strongestChain
+                  , longestChain
+                  , allChains
+                  , build
+                  ) where
 
-import Data.List
+import Data.List ( foldl1' )
 
 import qualified Data.Map as M
 

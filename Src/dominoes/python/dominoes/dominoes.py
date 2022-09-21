@@ -31,7 +31,7 @@ from functools       import reduce
 from pyrsistent      import PMap, PVector, m, pmap, pvector, v
 from typing          import Annotated, Callable, Final, Literal, NamedTuple, NewType, Union
 
-import dominoes.zipper as Zip
+import zipper as Zip
 
 
 #
@@ -84,7 +84,7 @@ def assoc_domino_internal(avail: PMap, id: int, domino: Domino) -> PMap:
     def update_avail(_id, _end):
         dom = PlayedDomino(id=_id, end=_end)
         return lambda u: u.append(dom) if u else v(dom)
-        
+
     a, b = domino
     avail = avail.transform([a], update_avail(id, b))
     if a != b:
@@ -143,7 +143,7 @@ class SearchNode(NamedTuple):
 
 class SubtreeValue(NamedTuple):
     score: int
-    chain: list[tuple[int, int]]    
+    chain: list[tuple[int, int]]
 
 Node = NewType('Node', Union[SearchNode, SubtreeValue])
 
@@ -157,7 +157,7 @@ def is_subtree_value(node: Node) -> bool:
 # A zipper is an immutable representation of a tree that allows
 # pure navigation and modification. The zipper's behavior is
 # configured by functions that distinguish branch nodes, get
-# a branch node's children, and create a new node 
+# a branch node's children, and create a new node
 
 def is_branch(node: Node) -> bool:
     """Any SearchNode wi """
@@ -202,7 +202,7 @@ def build(seed: PlayedDomino, pool: Pool) -> SearchNode:
 # Algebra: SearchNode -> SubtreeValue
 #
 # The Algebra is the transformation that is used at each level to collapse and score a subtree.
-# 
+#
 
 Algebra = Callable[[SearchNode], SubtreeValue]
 
@@ -313,7 +313,7 @@ def search(dominoes: list[Domino], alg: Algebra, start: int = 0) -> SubtreeValue
     """Runs a full search for an optimal chain, returning the aggregate SubtreeValue.
 
     The search is completed when all the children of the root node have been processed.
-    
+
     + dominoes: input list of available dominoes (repeats ok), excluding special start tile
     + alg: a function of a node that reduces the subtree at that node to a value
     + [start=0]: optional alternative number for exposed end of start tile
@@ -330,7 +330,7 @@ def search(dominoes: list[Domino], alg: Algebra, start: int = 0) -> SubtreeValue
 
 #
 # Command-Line Options
-#    
+#
 
 def get_args():
     """Reads command line arguments and returns object containing stored values.
@@ -368,7 +368,7 @@ def read_dominoes(files):
     return dominoes
 
 def display_chain(chain):
-    """Prints chain in order including the singleton start tile.""" 
+    """Prints chain in order including the singleton start tile."""
     print([chain[0][1], *chain[1:]])
 
 
@@ -378,11 +378,10 @@ def display_chain(chain):
 
 if __name__ == '__main__':
     args = get_args()
-    print(args)
     dominoes = read_dominoes(args.files)
     alg = longest_chain if args.objective == 'longest' else best_chain
     res = search(dominoes, alg, args.start)
-    
+
     print(f'Search for {args.objective} chain with dominoes:')
     print(dominoes)
     print(f'Optimal score {res.score} with chain:')

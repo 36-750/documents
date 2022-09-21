@@ -1,6 +1,12 @@
 -- DominoPool.hs - An immutable pool of available objects indexed by exposed ends
 
-module DominoPool where
+module DominoPool ( Dots
+                  , Domino
+                  , Pool
+                  , initializePool
+                  , assocDomino
+                  , dissocDomino
+                  ) where
 
 import qualified Data.Map as M
 
@@ -29,12 +35,12 @@ dissocDomino (m, n) = if m /= n then remove m n . remove n m else remove m m
         Nothing -> pool
         Just ds -> case M.lookup k ds of
                      Nothing -> pool
-                     Just cnts -> M.update (decr k) j pool
+                     Just _  -> M.update (decr k) j pool
     decr :: Dots -> M.Map Dots Int -> Maybe (M.Map Dots Int)
     decr k cnts = case M.lookup k cnts of
                     Nothing -> Just cnts
                     Just 1 -> if M.size cnts == 1 then Nothing else Just (M.delete k cnts)
-                    Just n -> Just (M.insert k (n - 1) cnts)
+                    Just c -> Just (M.insert k (c - 1) cnts)
 
 initializePool :: [Domino] -> Pool
 initializePool = foldr assocDomino emptyPool

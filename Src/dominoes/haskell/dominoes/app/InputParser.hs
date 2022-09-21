@@ -8,14 +8,10 @@ module InputParser
 
 import Control.Monad.Combinators
 import Data.Text (Text)
-import Data.Maybe
 import Data.Void
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import Text.Megaparsec.Char.Lexer (decimal)
-
-import qualified Data.Text                  as T
-import qualified Text.Megaparsec.Char.Lexer as L
 
 
 type Parser = Parsec Void Text
@@ -25,11 +21,12 @@ dominoParser :: Parser (Int, Int)
 dominoParser = do
   a <- decimal
   space
-  oneOf [':', '/', '-']
+  _ <- oneOf [':', '/', '-']
   space
   b <- decimal
   return (a, b)
 
+dominoSep :: Parser ()
 dominoSep = space >> char ',' >> space
 
 dominoListParser :: Parser DominoList
