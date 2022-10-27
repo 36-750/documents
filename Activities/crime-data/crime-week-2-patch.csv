@@ -1,0 +1,4 @@
+_id,REPORT_NAME,SECTION,DESCRIPTION,ARREST_TIME,ADDRESS,NEIGHBORHOOD,ZONE
+23532,OFFENSE 2.0,2702,Aggravated Assault.,2015-04-01T02:00:00,Zone 2,Outside City,1
+25281,OFFENSE 2.0,2701,Simple Assault.,2015-04-06T23:58:00,400 block Cathedral Ave,Mt. Oliver Neighborhood,3
+25354,ARREST,1543,Driving While Operating Privilege is Suspended or Revoked.,2015-04-06T18:03:00,Paulson Ave & Deary St,Lincoln-Lemington-Belmar,5
