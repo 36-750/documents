@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/local/priority/bin/python
 
 """
 Code for solving the making change dynamic programming problem.
@@ -13,7 +13,7 @@ from itertools import combinations, chain
 MAX_CENTS = 100
 
 def subsets(iter, r):
-    return map(set, combinations(iter, r))
+    return list(map(set, combinations(iter, r)))
 
 def all_coin_sets(denominations, size, always_penny=True):
     """Iterator over all coin sets of specified size with allowed denominations.
@@ -26,8 +26,7 @@ def all_coin_sets(denominations, size, always_penny=True):
     """
 
     if always_penny:
-        return map(lambda s: s.union([1]),
-                   subsets(set(denominations) - set([1]), size - 1))
+        return [s.union([1]) for s in subsets(set(denominations) - set([1]), size - 1)]
     else:
         return subsets(set(denominations), size)
 
@@ -52,6 +51,9 @@ def make_change(denominations, num_coins, weights=[1] * MAX_CENTS,
 
     for coin_set in all_coin_sets(denominations, num_coins, always_penny):
         change = best_change_with(coin_set, intuitive)
+
+        if not all(change):  # Could not make change for all values
+            continue
 
         average = 0.0
         denomin = 0.0
@@ -86,7 +88,7 @@ def best_change_with(coin_set, intuitive=False):
     num_coins = len(coin_set)
     min_coin = min(coin_set)
 
-    sentinel = range(MAX_CENTS)
+    sentinel = list(range(MAX_CENTS))
     for i in range(min_coin):
         best[i] = sentinel
 
@@ -144,6 +146,8 @@ if __name__ == "__main__":
                         help="Require an intuitive solution")
     # ATTN: add option for weights to be read from a file, default uniform
     #       just use uniform for now
+    # ATTN: allow-no-pennies doesn't do much unless you restrict the range
+    #       to min_coin:MAX_CENTS
 
     args = parser.parse_args()
     denominations = tuple(range(1, MAX_CENTS))
@@ -152,9 +156,9 @@ if __name__ == "__main__":
                                          intuitive=args.intuitive,
                                          always_penny=args.require_pennies)
 
-    print('Denominations {} with uniform average {}'
-          ''.format(sorted(coins), average))
+    print(('Denominations {} with uniform average {}'
+          ''.format(sorted(coins), average)))
     print("Best change for each purchase cost:")
     for cost, best_change in enumerate(change):
         if cost > 0:
-            print('    {} {}'.format(cost, best_change))
+            print(('    {} {}'.format(cost, best_change)))
