@@ -1,4 +1,38 @@
 # A Quick StateMachine Implementation
+#
+# Example use:
+#     class Foo(StateMachine):
+#         a = State('a')
+#         b = State('b')
+#         c = State('c')
+#
+#         one = c >> a
+#         two = a >> b | c >> b
+#         six = b >> c
+#
+#         input = DelegateTo(one)
+#
+#         def on_enter_a(self):
+#             print('Entering a')
+#
+#         def on_exit_a(self):
+#             print('Exiting a')
+#
+#         def on_enter_b(self):
+#             print('Entering b')
+#
+#         def on_exit_b(self):
+#             print('Exiting b')
+#
+#         def during_six(self, event, source, target):
+#             print(f'Transition {event["type"]} from {source} to {target}')
+#
+#     sm = Foo()
+#     print(str(sm))
+#
+#     sm.dispatch({'type': 'two'})
+#     print(sm.state)
+#     sm.dispatch({'type': 'six'})
 
 from __future__ import annotations
 
@@ -224,167 +258,3 @@ class StateMachine(metaclass=StateConfig):
             self.state = target
             return target
         return None
-
-#
-# Events and Machine Registry (for later)
-#
-
-class Event:
-    pass
-
-class EventQueue:
-    pass
-
-class StateMachineRegistry:
-    def dispatch(self, event):
-        pass
-
-
-#
-# Generic Operations
-#
-
-default_registry = StateMachineRegistry()
-
-def register(machine, registry=default_registry):
-    pass
-
-def dispatch(event, registry=default_registry):
-    registry.dispatch(event)
-
-
-if __name__ == '__main__':
-    class Foo(StateMachine):
-        a = State('a')
-        b = State('b')
-        c = State('c')
-
-        one = c >> a
-        two = a >> b | c >> b
-        six = b >> c
-
-        input = DelegateTo(one)
-
-        def on_enter_a(self):
-            print('Entering a')
-
-        def on_exit_a(self):
-            print('Exiting a')
-
-        def on_enter_b(self):
-            print('Entering b')
-
-        def on_exit_b(self):
-            print('Exiting b')
-
-        def during_six(self, event, source, target):
-            print(f'Transition {event["type"]} from {source} to {target}')
-
-    sm = Foo()
-    print(str(sm))
-
-    sm.dispatch({'type': 'two'})
-    print(sm.state)
-    sm.dispatch({'type': 'six'})
-
-    print('\n----------------\n')
-
-    sm = Foo()
-    print('Listens for: ', ", ".join(sm.listens_for))
-    sm.dispatch({'type': 'two'})
-    sm.dispatch({'type': 'six'})
-    sm.dispatch({'type': 'input'})
-    print(sm.state)
-
-    print('\n----------------\n')
-
-    class TrafficLight(StateMachine):
-        green = State('green')
-        yellow = State('yellow')
-        red = State('red')
-
-        cycle = (green >> yellow
-                 | yellow >> red
-                 | red >> green)
-
-        def on_enter_green(self):
-            print('Turning Green')
-
-        def on_enter_yellow(self):
-            print('Turning Yellow')
-
-        def on_enter_red(self):
-            print('Turning Red')
-
-    traffic_light = TrafficLight()
-    cycle = lambda: traffic_light.dispatch({'type': 'cycle'})
-
-    print(traffic_light)
-    print('Starting in ' + traffic_light.state.capitalize())
-    cycle()
-    cycle()
-    cycle()
-    cycle()
-    cycle()
-    cycle()
-    print('Ending in ' + traffic_light.state.capitalize())
-
-    print('\n----------------\n')
-
-    traffic_light = TrafficLight(initial='red')
-    print('Listens for: ', ", ".join(traffic_light.listens_for))
-    cycle = lambda: traffic_light.dispatch({'type': 'cycle'})
-    print('Starting in ' + traffic_light.state.capitalize())
-    cycle()
-    cycle()
-    cycle()
-    cycle()
-    cycle()
-    cycle()
-    print('Ending in ' + traffic_light.state.capitalize())
-
-    class Lang(StateMachine):
-        start = State('start')
-        letters = State('letter')
-        numbers = State('number')
-        error = State('error')
-        done = State('done')
-
-        def on_input(self, source, event):
-            if re.match('[A-Za-z]', event['data']):
-                if source in {'letter', 'start'}:
-                    return 'letter'
-            elif re.match('[0-9]', event['data']):
-                if source in {'letter', 'number'}:
-                    return 'number'
-            return 'error'
-
-        input = (start >> on_input
-                 | letters >> on_input
-                 | numbers >> on_input)
-        eos = numbers >> done
-
-        def during_input(self, event, source, target):
-            print(f'Saw character {event["data"]}')
-
-        def on_enter_letter(self):
-            print('Got a letter')
-
-        def on_enter_number(self):
-            print('Got a number')
-
-        def on_enter_done(self):
-            print('Done')
-
-    lm = Lang()
-    lm.dispatch({'type': 'input', 'data': 'a'})
-    lm.dispatch({'type': 'input', 'data': 'b'})
-    lm.dispatch({'type': 'input', 'data': 'C'})
-    lm.dispatch({'type': 'input', 'data': 'd'})
-    lm.dispatch({'type': 'input', 'data': 'e'})
-    lm.dispatch({'type': 'input', 'data': 'f'})
-    lm.dispatch({'type': 'input', 'data': 'G'})
-    lm.dispatch({'type': 'input', 'data': '2'})
-    lm.dispatch({'type': 'input', 'data': '4'})
-    lm.dispatch({'type': 'input', 'data': '8'})
-    lm.dispatch({'type': 'eos'})
