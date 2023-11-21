@@ -1,0 +1,20 @@
+(abc+|def[ghi]*|z)
+[^]]+
+(?:-?[1-9]+[0-9]*|0)
+[A-Za-z_][A-Za-z0-9_.!?]*
+
+plus = char('+')
+bgroup = char('(')
+egroup = char(')')
+regular = regex('[...]')
+
+1. regexp_c :: combines multiple regexes (recursive)
+2. regex :: overall parser for a regexp
+
+@lazy
+def regexp_c():
+    pass
+
+group = fmap(between(bgroup, regexp_c, egroup), make_group)
+regex = alts(regular, cclass, comp_class, group)
+
