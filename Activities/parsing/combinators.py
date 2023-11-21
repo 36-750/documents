@@ -8,7 +8,7 @@ import re
 import enum as E
 
 from dataclasses       import dataclass
-from functools         import wraps
+from functools         import partial, wraps
 from typing            import Callable, cast, Generic, TypeVar
 from typing_extensions import Any, TypeAlias, TypeGuard
 
@@ -97,6 +97,14 @@ ParseResult: TypeAlias = Success[A] | Failure
 
 Parser: TypeAlias = Callable[[ParseState], ParseResult[A]]
 
+# decorator for a parser that sets a label
+def parser(label="?", f=None):
+    "A decorator that attaches a label to a parser"
+    if f is None:
+        return partial(parser, label)
+    set_label(f, label)
+    return f
+
 
 #
 # Helpers
@@ -128,28 +136,27 @@ def get_label(parser) -> str:
         return ""
     return getattr(parser, 'parser_label') or "?"
 
+@parser('void')
 def void(state: ParseState) -> ParseResult[A]:
     "Parser that always fails"
     return Failure("Void parser", state.point)
-
-set_label(void, 'void')
 
 def failure(reason: str) -> Parser[A]:
     "Returns a void parser that fails with stated reason."
     def fails(state: ParseState) -> ParseResult[A]:
         return Failure(reason, state.point)
-    set_label(fails, f'fails({reason})')
-    return fails
+    return parser(f'fails({reason})', fails)
 
 def pure(x: A) -> Parser[A]:
     "Returns a parser that just returns x on the empty string."
+    @parser(f'pure({x})')
     def pureP(state: ParseState) -> ParseResult[A]:
         return Success(x, state)
-    set_label(pureP, f'pure({x})')
     return pureP
 
 def fmap(p: Parser[A], f: Callable[[A], B]) -> Parser[B]:
     "Transforms the parse result by a function."
+    @parser(f'fmap({get_label(p)})')
     def mapped(state: ParseState) -> ParseResult[B]:
         parse_A = p(state)
         match parse_A:
@@ -157,11 +164,11 @@ def fmap(p: Parser[A], f: Callable[[A], B]) -> Parser[B]:
                 return Success(f(resA), stateA)
             case _:  # Failure
                 return parse_A
-    set_label(mapped, f'fmap({get_label(p)})')
     return mapped
 
 def pipe(p: Parser[A], f: Callable[[A], Parser[B]]) -> Parser[B]:
     "Creates a parser pipeline where the second stage depends on the result of the first."
+    @parser(f'pipe({get_label(p)})')
     def piped(state: ParseState) -> ParseResult[B]:
         parse_A = p(state)
         match parse_A:
@@ -169,7 +176,6 @@ def pipe(p: Parser[A], f: Callable[[A], Parser[B]]) -> Parser[B]:
                 return f(resA)(stateA)
             case _:  # Failure
                 return parse_A
-    set_label(piped, f'pipe({get_label(p)})')
     return piped
 
 
@@ -180,29 +186,31 @@ def pipe(p: Parser[A], f: Callable[[A], Parser[B]]) -> Parser[B]:
 def seq(p: Parser[A], q: Parser[B]) -> Parser[tuple[A, B]]:
     "Executes two parsers in sequence, collecting results, short-circuiting on failure."
     sequenced = pipe(p, lambda x: pipe(q, lambda y: pure((x, y))))   # type: ignore
-    set_label(sequenced, f'seq({get_label(p)}, {get_label(q)})')
-    return sequenced
+    return parser(f'seq({get_label(p)}, {get_label(q)})', sequenced)
 
 def followedBy(p: Parser[A], q: Parser[B]) -> Parser[A]:
     "Executes two parsers in sequence, ignoring the result of the second."
     sequenced = pipe(p, lambda x: pipe(q, lambda y: pure(x)))   # type: ignore
-    set_label(sequenced, f'followedBy({get_label(p)}, {get_label(q)})')
-    return sequenced
+    return parser(f'followedBy({get_label(p)}, {get_label(q)})', sequenced)
 
 def follows(p: Parser[A], q: Parser[B]) -> Parser[B]:
     "Executes two parsers in sequence, ignoring the result of the first."
     sequenced = pipe(p, lambda x: pipe(q, lambda y: pure(y)))   # type: ignore
-    set_label(sequenced, f'follows({get_label(p)}, {get_label(q)})')
-    return sequenced
+    return parser(f'follows({get_label(p)}, {get_label(q)})', sequenced)
 
 def between(p: Parser[B], q: Parser[A], r: Parser[B]) -> Parser[A]:
     "Executes three parsers in sequence, ignoring the first and last."
     sequenced = followedBy(follows(p, q), r)
-    set_label(sequenced, f'between({get_label(p)}, {get_label(q)}, {get_label(r)})')
-    return sequenced
-
+    return parser(f'between({get_label(p)}, {get_label(q)}, {get_label(r)})', sequenced)
 
 def chain(*ps: Parser) -> Parser[list]:
+    """Returns a parser that runs a list of parsers in success, failing if any fail.
+
+    The value of the parser is the list of values returned by the component parsers
+    in the same order as specified.
+
+    """
+    @parser(f'chain({", ".join(map(get_label, ps))})')
     def chained(state: ParseState) -> ParseResult[list]:
         state1 = state
         results = []
@@ -215,12 +223,13 @@ def chain(*ps: Parser) -> Parser[list]:
                     assert isinstance(parsed, Failure)
                     return Failure(f': {parsed.message}', parsed.pos, parsed.data)
         return Success(results, state1)
-    set_label(chained, f'chain({", ".join(map(get_label, ps))})')
     return chained
 
 def alt(p: Parser[A], q: Parser[B]) -> Parser[A | B]:
+    "Returns a parser that parses p, or q if p fails."
     label = f'alt({get_label(p)}, {get_label(q)})'
 
+    @parser(label)
     def alternative(state: ParseState) -> ParseResult[A | B]:
         parse_A = p(state)
         match parse_A:
@@ -235,11 +244,11 @@ def alt(p: Parser[A], q: Parser[B]) -> Parser[A | B]:
                                       {'failure-positions': (parse_A.pos, parse_B.pos)})
                     return Failure(mesg, point, data)
                 return cast(ParseResult[A | B], parse_B)
-    set_label(alternative, label)
     return alternative
 
 def alts(*ps: Parser) -> Parser:
     "Matches the first of a list of parsers to succeed. See also `alt`."
+    @parser(f'alts({", ".join(map(get_label, ps))})')
     def alternatives(state: ParseState) -> ParseResult:
         farthest = state.point
         data = None
@@ -257,16 +266,16 @@ def alts(*ps: Parser) -> Parser:
                         mesg = parsed.message
                     positions.append(parsed.pos)
         return Failure(f'All alternatives failed: {mesg}', farthest, merge_data(data, {'failure-positions': positions}))
-    set_label(alternatives, f'alts({", ".join(map(get_label, ps))})')
     return alternatives
 
 def optional(p: Parser[A]) -> Parser[A | None]:
     "Matches a parser zero or one times."
     opt = alt(p, pure(None))
-    set_label(opt, f'{get_label(p)}?')
-    return opt
+    return parser(f'{get_label(p)}?', opt)
 
 def many(p: Parser[A]) -> Parser[list[A]]:
+    "Returns a parser that matches p zero or more times."
+    @parser(f'{get_label(p)}*')
     def p_star(state: ParseState) -> ParseResult[list[A]]:
         results = []
         parsed = p(state)
@@ -280,10 +289,11 @@ def many(p: Parser[A]) -> Parser[list[A]]:
                 case _:  # Failure
                     break
         return Success(results, state1)
-    set_label(p_star, f'{get_label(p)}*')
     return p_star
 
 def some(p: Parser[A]) -> Parser[list[A]]:
+    "Returns a parser that matches p one or more times."
+    @parser(f'{get_label(p)}+')
     def p_plus(state: ParseState) -> ParseResult[list[A]]:
         parsed = p(state)
 
@@ -302,13 +312,14 @@ def some(p: Parser[A]) -> Parser[list[A]]:
                 case _:  # Failure
                     break
         return Success(results, state1)
-    set_label(p_plus, f'{get_label(p)}+')
     return p_plus
 
 def repeated(p: Parser[A], minimum: int, maximum: int) -> Parser[list[A]]:
+    "Returns a parser that matches p from minimum to maximum times, inclusive."
     if minimum < 0 or minimum > maximum or maximum < 0:
         raise ValueError('repeated parser requires non-negative minimum <= maximum')
 
+    @parser(f'{get_label(p)}{{{minimum},{maximum}}}')
     def p_rep(state: ParseState) -> ParseResult[list[A]]:
         state1 = state
         reps = 0
@@ -332,7 +343,6 @@ def repeated(p: Parser[A], minimum: int, maximum: int) -> Parser[list[A]]:
                     break
         return Success(results, state1)
 
-    set_label(p_rep, f'{get_label(p)}{{{minimum},{maximum}}}')
     return p_rep
 
 def interleave(
@@ -349,7 +359,8 @@ def interleave(
     Returns list of item results.
 
     """
-
+    @parser((f'interleave{"" if allow_empty else "1"}'
+             f'({get_label(start)} {get_label(item)} {get_label(sep)} {get_label(end)})'))
     def interleaving(state: ParseState) -> ParseResult[list[A]]:
         state1 = state
         if start:
@@ -389,19 +400,17 @@ def interleave(
 
         return Success(results, item_state or state1)
 
-    set_label(interleaving, (f'interleave{"" if allow_empty else "1"}'
-                             f'({get_label(start)} {get_label(item)} {get_label(sep)} {get_label(end)})'))
     return interleaving
 
 def peek(p: Parser[A]) -> Parser[A]:
     "Returns a parser that parses ahead without advancing the state."
+    @parser(f'peek({get_label(p)})')
     def peek_ahead(state: ParseState) -> ParseResult[A]:
         match p(state):
             case Success(result, _):
                 return Success(result, state)
             case parsed:  # Failure
                 return parsed
-    set_label(peek_ahead, f'peek({get_label(p)})')
     return peek_ahead
 
 
@@ -409,6 +418,7 @@ def peek(p: Parser[A]) -> Parser[A]:
 # Basic Combinators
 #
 
+@parser('eof')
 def eof(state: ParseState) -> ParseResult[bool]:
     "Parser that only succeeds at the end of the input."
     _, more = state.require(1)
@@ -418,61 +428,63 @@ def eof(state: ParseState) -> ParseResult[bool]:
 
 def any_char() -> Parser[str]:
     "Returns a parser that expects any single character."
+    @parser('any_char')
     def this_char(state: ParseState) -> ParseResult[str]:
         input, enough = state.require(1)
         if enough:
             return Success(input, state.advance(1))
         return Failure("Expected a character", state.point)
-    set_label(this_char, 'any_char()')
     return this_char
 
 def char(c) -> Parser[str]:
     "Returns a parser that expects a specific character."
+    @parser(f'char({c})')
     def this_char(state: ParseState) -> ParseResult[str]:
         input, enough = state.require(1)
         if enough and c == input:
             return Success(c, state.advance(1))
         return Failure(f"Expected character {c}", state.point, {'expected': c})
-    set_label(this_char, f'char({c})')
     return this_char
 
 def char_in(chars) -> Parser[str]:
-    "Returns a parser that expects a specific character."
+    "Returns a parser that expects a character in a given set."
+    @parser(f'char_in({chars})')
     def this_char(state: ParseState) -> ParseResult[str]:
         input, enough = state.require(1)
         if enough and input[0] in chars:
             return Success(input, state.advance(1))
         return Failure(f"Expected character in [{chars}]", state.point, {'expected': chars})
-    set_label(this_char, f'char_in({chars})')
     return this_char
 
 def char_satisfies(pred, description='predicate') -> Parser[str]:
     "Returns a parser that expects a character satisfying a predicate."
+    @parser(f'char_satisfies({description})')
     def good_char(state: ParseState) -> ParseResult[str]:
         input, enough = state.require(1)
         if enough and pred(input):
             return Success(input, state.advance(1))
         return Failure(f"Expected character satisfying {description}", state.point)
-    set_label(good_char, f'char_satisfies({description})')
     return good_char
 
 def lexeme(s: str) -> Parser[str]:
     "Returns a parser that expects a specific string."
     n = len(s)
 
+    @parser(f'lexeme({s})')
     def this_str(state: ParseState) -> ParseResult[str]:
         input, enough = state.require(n)
         if enough and s == input:
             return Success(s, state.advance(n))
         return Failure(f"Expected string {s}", state.point)
 
-    set_label(this_str, f'lexeme({s})')
     return this_str
 
 def string_in(strs: list[str]) -> Parser[str]:
+    "Returns a parser that matches a fixed set of strings"
     sorted_strs = sorted(strs, key=lambda s: len(s), reverse=True)  # longest first
     joined = "|".join(map(re.escape, sorted_strs))
 
+    @parser(f'string_in({", ".join(strs)})')
     def words(state: ParseState) -> ParseResult[str]:
         input = state.view()
         m = re.match(joined, input)
@@ -481,9 +493,9 @@ def string_in(strs: list[str]) -> Parser[str]:
             return Success(matched, state.advance(len(matched)))
         return Failure(f'Expected one of {", ".join(strs)}', state.point, {'expected': strs})
 
-    set_label(words, f'string_in({", ".join(strs)})')
     return words
 
+@parser('whitespace')
 def whitespace(state: ParseState) -> ParseResult[str]:
     "This has type Parser str"
     m = re.match(r'\s+', state.view())
@@ -491,26 +503,26 @@ def whitespace(state: ParseState) -> ParseResult[str]:
         matched = m.group(0)
         return Success(matched, state.advance(len(matched)))
     return Failure("Expected whitespace", state.point)
-set_label(whitespace, 'whitespace')
 
 def regex(re_in: str, flags: re.RegexFlag = re.NOFLAG, group=0) -> Parser[str]:
     pattern = re_in[1] if re_in.startswith('^') else re_in
 
+    @parser(f'regex(/{pattern}/{flags}[{group}])')
     def regexP(state: ParseState) -> ParseResult[str]:
         input = state.view()
         m = re.match(pattern, input, flags)
         if m:
             matched = m.group(group)
-            return Success(matched, state.advance(len(matched)))
+            return Success(matched, state.advance(len(m.group(0))))
         return Failure(f'Expected match of regex /{pattern}/ with flags {flags}', state.point,
                        {'pattern': pattern, 'flags': flags, 'group': group})
 
-    set_label(regexP, f'regex(/{pattern}/{flags}[{group}])')
     return regexP
 
 def strings(ps: list[Parser[str]], sep="") -> Parser[str]:
     """Runs string parsers in succession returning string joined by `sep`."""
 
+    @parser(f'strings({", ".join(map(get_label, ps))})')
     def stringsP(state: ParseState) -> ParseResult[str]:
         state1 = state
         concat = []
@@ -526,7 +538,6 @@ def strings(ps: list[Parser[str]], sep="") -> Parser[str]:
         joined = sep.join(concat)
         return Success(joined, state.advance(len(joined)))
 
-    set_label(stringsP, f'strings({", ".join(map(get_label, ps))})')
     return stringsP
 
 letter = char_satisfies(str.isalpha)
@@ -540,8 +551,7 @@ def enum(enum_cls: type[E.Enum]) -> Parser[E.Enum]:
     "Parses the string repr of a value in a specified enum class"
     e_vals = {str(e.value): e for e in enum_cls}
     enum_val = fmap(string_in(list(e_vals.keys())), lambda s: e_vals[s])
-    set_label(enum_val, f'enum({enum_cls})')
-    return enum_val
+    return parser(f'enum({enum_cls})', enum_val)
 
 def balanced_delimiters(opening: str, closing: str, seen_opening=False) -> Parser[tuple[str, list[int]]]:
     """Matches a string that is balanced with respect to specified delimiters.
@@ -556,6 +566,7 @@ def balanced_delimiters(opening: str, closing: str, seen_opening=False) -> Parse
     opening (+) or closing (-).
 
     """
+    @parser(f'balanced("{opening}", "{closing}")')
     def balancedP(state: ParseState) -> ParseResult[tuple[str, list[int]]]:
         input = state.view()
         point = state.point
@@ -589,7 +600,6 @@ def balanced_delimiters(opening: str, closing: str, seen_opening=False) -> Parse
 
         return Success((input[:index], positions), state.advance(index))
 
-    set_label(balancedP, f'balanced("{opening}", "{closing}")')
     return balancedP
 
 
@@ -643,42 +653,4 @@ def lazy(fn, label=""):
                 return p(state1)
             # A value constructed from the parse
             return Success(finished.value, state1)
-    set_label(lazily, f'lazy({label})')
-    return lazily
-
-def fail_noisily(state: ParseState) -> ParseResult[A]:
-    raise ParseError('Marked failure', data={'pos': state.point, 'fail-noisily': True})
-set_label(fail_noisily, 'fail-noisily')
-
-def fix(rec: Callable[[Parser[Any]], Parser[A]], base: Parser[A] = void) -> Parser[A]:
-    """Constructs a fixed-point recursive parser.
-
-    Fix p = p (Fix p) describes a recursively nested structure to
-    arbitrary depth.
-
-    Parameters
-    ----------
-    base: the base case (0-depth) parser, which can be and defaults to void.
-
-    rec: a function that takes a parser that is a partial solution
-        to the fixed-point equation and returns a parser one level
-        deeper.
-
-    Returns the fixed-point parser, with arbitrary recursion/nesting.
-
-    ATTN: Right now this does not handle errors well!
-
-    Example:
-      ident = regex(r'[-A-Za-z_?!]+')
-      sexp = fix(lambda p: alt(ident, interleave(p, whitespace, start=char('('), end=char(')'))))
-      parse('(a b (c d (e f g (h (i (j))))))', sexp)
-
-    """
-    def fix_rec(state: ParseState) -> ParseResult[A]:
-        parsed = base(state)
-        if failed(parsed):
-            p = fix(rec, rec(base))
-            parsed = p(state)
-        return parsed
-    set_label(fix_rec, f'fixed({get_label(base)}, f)')
-    return fix_rec
+    return parser(f'lazy({label})', lazily)

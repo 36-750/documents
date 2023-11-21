@@ -29,7 +29,7 @@ def test_basic():
     assert run('10, 20, 30', fmap(regex('[0-9]+'), int)) == 10
 
 def test_reps():
-    list_of_ints = interleave(fmap(regex('[0-9]+'), int), lexeme(', '), start=char('['), end=char(']'))
+    list_of_ints = interleave(natural_number, lexeme(', '), start=char('['), end=char(']'))
     assert run('[10, 20, 30]', list_of_ints) == [10, 20, 30]
     assert run('[10]', list_of_ints) == [10]
     assert run('[]', list_of_ints) == []
@@ -90,22 +90,3 @@ def test_lazy():
     assert run('(a b (c d 3 (e 10 g (h (i (j))))))', sexp) == ['a', 'b', ['c', 'd', 3, ['e', 10, 'g', ['h', ['i', ['j']]]]]]
     with pytest.raises(ParseError):
         run('(a b (c $ 3 (e 10 g (h (i (j))))))', sexp)
-
-
-# Experimental    
-def test_recursive():
-    def sexp_rec(p):
-        return alt(ident, interleave(p, whitespace, start=char('('), end=char(')')))
-
-    # S-expression parser to depth 4
-    sexp4 = sexp_rec(sexp_rec(sexp_rec(sexp_rec(ident))))
-    assert run('(a b (c d (e f g)))', sexp4) == ['a', 'b', ['c', 'd', ['e', 'f', 'g']]]
-
-    # S-expression parser to arbitrary depth
-    sexp = fix(sexp_rec)
-    assert run('(a b (c d (e f g)))', sexp) == ['a', 'b', ['c', 'd', ['e', 'f', 'g']]]
-    assert run('(a b (c d (e f g (h (i (j))))))', sexp) == ['a', 'b', ['c', 'd', ['e', 'f', 'g', ['h', ['i', ['j']]]]]]
-
-    # S-expression with symbols and numbers
-    sexp = fix(lambda p: alt(alt(ident, integer), interleave(p, whitespace, start=char('('), end=char(')'))))
-    assert run('(a b (c d 3 (e 10 g (h (i (j))))))', sexp) == ['a', 'b', ['c', 'd', 3, ['e', 10, 'g', ['h', ['i', ['j']]]]]]
