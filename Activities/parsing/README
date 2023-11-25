@@ -1,0 +1,22 @@
+Core API
+--------
+- combinators.py :: Python implementation
+- combinators.r  :: R implementation
+- test_combinators.py :: pytest tests
+- test_combinators.r :: testthat tests
+
+Applications
+------------
+All of these can be easily converted from one language to another.
+The combinator code is almost identical. The support code will
+change however. An additional EXERCISE is to implement one of these
+in your chosen language when the given implementation is in the
+other.
+
+- parse_quotes.r :: Parsing quoted strings with escape sequences
+- test_quoted.r :: tests of quoted string parsing
+- parse_regexp.py :: Parse regular expressions into a syntax tree
+- test_regexp.py :: Tests of reguluar expression parsing
+- parse_state_machine.py :: Parse a text specification of state machines
+- sm1.txt :: Sample input specification for a state machine
+

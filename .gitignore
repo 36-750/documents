@@ -4,5 +4,6 @@
 .bonz*
 .DS_Store
 */RCS/*,v
+__pycache__
 
 /Lectures/weekB/.Rhistory
