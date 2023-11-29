@@ -1,0 +1,29 @@
+Literals   abc
+Repetition  a* a? a+ a{1,4}
+Character classes [abc-z]
+Compl Character classes [^abc]
+Alternation   a|b
+Grouping   (a) (?:a)
+Concatenation ab
+Dot .
+
+(TAG, data..)
+
+{'tag': TAG, ...}
+
+1. Enumeration of Tags
+2. Arrangment of the data
+
+'abc' -> (LITERAL, 'abc')
+'abc*' -> (CAT, (LITERAL, 'ab'), (REPETITION, '*', (LITERAL, 'c')))
+
+(LITERAL, 'abc')
+(CONCAT, (LITERAL, 'ab'), (GROUP, 
+(REPETITION, '*', (LITERAL, 'a'))
+(CLASS, 'abc-z')
+(CCLASS, 'abc')
+(ALT, (LITERAL, 'a'), (CLASS, 'bc'))
+(DOT)
+(GROUP, (ALT, (LITERAL, 'b'), (LITERAL, 'c')))
+
+

@@ -1,0 +1,67 @@
+(abc+|def[ghi]*|z)
+[^]]+
+(?:-?[1-9]+[0-9]*|0)
+[A-Za-z_][A-Za-z0-9_.!?]*
+
+[abc]
+[^abc]
+[abc^]
+[]abc]
+[^]abc]
+
+plus = char('+')
+bgroup = char('(')
+egroup = char(')')
+regular = regex('[...]')
+
+1. regexp_c :: combines multiple regexes (recursive)
+2. regex :: overall parser for a regexp
+
+@lazy
+def regexp_c():
+    # recursive stuff here
+    pass
+
+lbrack = char('[')
+rbrack = char(']')
+    
+cclass = fmap(between(lbrack, regex('\]?[^]]*'), rbrack), make_class)
+comp_cclass = fmap(between(lbrack, regex('\^\]?[^]]*'), rbrack), make_class)
+
+fmap(seq(regex, star), lambda r_s: (STAR, r_s[0]))  # ^^^^ in regexp_c
+
+group = fmap(between(bgroup, regexp_c, egroup), make_group)
+regex = alts(regular, comp_class, cclass, group)
+
+@lazy
+def group():
+    yield bgroup
+    r = yield regexp_c
+    yield egroup
+    return make_group(r)
+
+def make_group(r):
+    if r.starswith('^'):
+        return (COMP_CCLASS, r)
+    return (CCLASS, r)
+
+bgroup = alt(lexeme('(?:'), char('('))
+@lazy
+def group():
+    b = yield bgroup
+    r = yield regexp_c
+    yield egroup
+    return make_group(r, b)
+
+def make_group(r):
+    return (GROUP, r)
+
+def make_group(r, begin):
+    if begin == '(?:':
+       return (GROUP, r)
+    return (CGROUP, r)
+
+def make_class(r):
+    if r.starswith('^'):
+        return (COMP_CCLASS, r)
+    return (CCLASS, r)

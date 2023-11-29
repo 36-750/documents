@@ -129,7 +129,7 @@ plabel <- function(parser) {
 }
 
 `plabel<-` <- function(x, value) {
-    attr(x, "parser-label") <- value
+    attr(x, "parser-label") <- str_c(value,  collapse = "")
     return( x )
 }
 
@@ -185,6 +185,7 @@ parser <- function(f, label = "?" ) {
 def.parser <- function(name, code, desc = "") {
     parser.name <- ensym(name)
     spec <- enexpr(code)
+    if ( length(desc) > 1 ) desc <- str_c(desc, collapse = "")
     if ( desc == "" ) {
         label <- as_string(parser.name)
     } else {
@@ -213,6 +214,9 @@ def.parser <- function(name, code, desc = "") {
 #
 # Helpers
 #
+
+# Convert NULL's to strings for labeling
+display <- function(s) ifelse(is.null(s), "None", s)
 
 # The Z-combinator for finding fixed points in an eager language.
 # The first is the combinator itself, and the second is the
@@ -293,7 +297,9 @@ pipe <- function(p, f) {
 # use: Parser a -> b -> Parser b
 # A parser that yields a specified value when the given parser succeeds
 use <- function(p, value) {
-    label <- str_glue("use({value}, {plabel(p)})")
+    # If value is a vector,  str_glue will make a vector so pre-join just in case.
+    val_label <- deparse(value)  # ifelse(is.null(value), "",  str_c(str_glue("{value}"), collapse = ""))
+    label <- str_glue("use({val_label}, {plabel(p)})")
     parser(fmap(p, function(result_) value), label)
 }
 
@@ -439,8 +445,8 @@ alts <- function(...) {
 # Runs the given parser, returning its result on success or
 # a default value on failure. Always succeeds.
 #
-optional <- function(p, default = NULL) {
-    parser(alt(p, pure(default)), str_glue("optional({plabel(p)}, {default})"))
+optional <- function(p, default = NA) {
+    parser(alt(p, pure(default)), str_glue("optional({plabel(p)}, {ifelse(is.null(default), 'None', default)})"))
 }
 
 # many: Parser a -> Parser (List a)
@@ -481,6 +487,7 @@ repeated <- function(p, minimum = 0, maximum = .Machine$integer.max) {
     if ( minimum < 0 || minimum > maximum || maximum < 0 ) {
         stop("repeated parser requires non-negative minimum <= maximum")
     }
+    label <- str_glue("{plabel(p)}, {minimum}, {maximum}")
     def.parser(repeated, {
         reps <- 0
         state1 <- .state
@@ -499,7 +506,7 @@ repeated <- function(p, minimum = 0, maximum = .Machine$integer.max) {
             reps <- reps + 1
         }
         Success(results, state1)
-    })
+    }, label)
 }
 
 # interleave: Parser a -> Parser b -> [Parser c] -> [Parser d] -> [Boolean] -> Parser (List a)
@@ -564,7 +571,7 @@ interleave <- function(item, sep, end, start, allow.empty = FALSE) {
             state <- item.state
         }
         Success(results, state)
-    })
+    }, label)
 }
 
 # peek: Parser a -> Parser a
@@ -707,7 +714,7 @@ string <- function(s, transform=function(x) x) {
             return( Failure(str_glue("Expected string '{s}'"), .state@point) )
         }
         Success(v$input, advance(.state, n))
-    })
+    }, s)
 }
 
 # A parser like `string` but with case-insensitive comparison
@@ -737,13 +744,13 @@ string_in <- function(strs) {
     joined <- str_c(map_chr(strs[sorted], str_escape), collapse = "|" )
     def.parser(string.in, {
         input <- view(.state)
-        m <- str_extract(input, regex(joined))
+        m <- str_extract(input, regex(str_c("^(?:", joined, ")")))
         if ( is.na(m) ) {
-            mesg <- str_glue("Expected on of {str_c(strs[sorted], collapse=',  ')}")
+            mesg <- str_glue("Expected one of {str_c(strs[sorted], collapse=',  ')}")
             return( Failure(mesg, .state@point, list(expected = strs)) )
         }
         Success(m, advance(.state, str_length(m)))
-    })
+    }, str_c(strs, collapse = ", "))
 }
 
 # strings: String* -> Parser String
@@ -759,6 +766,7 @@ strings <- function(...) {
 #
 sjoin <- function(..., sep = "") {
     pstrs <- list(...)
+    label <- str_c(map_chr(pstrs, plabel), collapse = ", ")
     def.parser(sjoin, {
         state1 <- .state
         concat <- vector("character", length(pstrs))
@@ -775,7 +783,7 @@ sjoin <- function(..., sep = "") {
         }
         joined <- str_c(concat, collapse = sep)
         Success(joined, state1)
-    })
+    }, label)
 }
 
 # re: Regex -> Parser String
@@ -792,7 +800,7 @@ re <- function(regexp, group = NULL, ignore_case = FALSE,
                multiline = FALSE, comments = FALSE,
                dotall = FALSE) {
     pattern <- ifelse(str_starts(regexp, fixed("^")), regexp, str_c("^", regexp))
-    label <- str_glue("/{pattern}/[{group}]") # Convert flags eventually
+    label <- str_glue("/{pattern}/[{display(group)}]") # Convert flags eventually
     def.parser(re, {
         input <- view(.state)
         m <- str_extract(input,
@@ -800,7 +808,7 @@ re <- function(regexp, group = NULL, ignore_case = FALSE,
                                multiline = multiline, comments = comments,
                                dotall = dotall),
                          group = c(0, group))
-        if ( is.na(m) ) {
+        if ( any(is.na(m)) ) {
             mesg <- str_glue("Expected regex match /{pattern}/")
             data <- list(pattern = pattern,
                          ignore_case = ignore_case,
@@ -810,12 +818,12 @@ re <- function(regexp, group = NULL, ignore_case = FALSE,
         }
         match <- ifelse(is.null(group), m, m[-1])
         Success(match, advance(.state, str_length(m[1])))
-    })
+    }, label)
 }
 
 # Common Lexical Parsers
 #
-newline <- parser(re('\r?\n'), 'newline')
+newline <- parser(re("\r?\n"), 'newline')
 letter <- parser(char_satisfies(function(s) str_starts(s, '[:alpha:]')), 'letter')
 letters <- parser(char_satisfies(function(s) str_starts(s, '[:alpha:]+')), 'letters')
 digit <- parser(char_satisfies(function(s) str_starts(s, '[:digit:]')), 'digit')

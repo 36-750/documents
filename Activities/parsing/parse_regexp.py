@@ -176,7 +176,7 @@ class Repetition(RegExpBranch):
             case '?' | RegexModifier.OPTIONAL:
                 self.type = RegexModifier.OPTIONAL
                 self.minimum = 0
-                self.maximum: int | None = None  # None is infinity
+                self.maximum: int | None = 1  # None is infinity
             case '*' | RegexModifier.MANY:
                 self.type = RegexModifier.MANY
                 self.minimum = 0
@@ -257,10 +257,14 @@ def join(rs: Iterable[RegExp | typing.Literal['|']]) -> RegExp:
         elif r == '|':
             alternated.append(Concat.make(concatenated))
             concatenated = []
+        elif isinstance(r, Concat):
+            concatenated.extend(r.children)
         else:
             concatenated.append(r)
+    # Clean up pending literal
     if last_literal is not None:
         concatenated.append(last_literal)
+    # Clean up pending concats
     if len(concatenated) > 0:
         alternated.append(Concat.make(concatenated))
     else:
