@@ -17,6 +17,7 @@ other.
 - test_quoted.r :: tests of quoted string parsing
 - parse_regexp.py :: Parse regular expressions into a syntax tree
 - test_regexp.py :: Tests of reguluar expression parsing
+- parse_regexp.r :: Parse regular expressions into a syntax tree
 - parse_state_machine.py :: Parse a text specification of state machines
 - sm1.txt :: Sample input specification for a state machine
 
