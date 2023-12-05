@@ -53,7 +53,7 @@
 
 import enum as E   # enum is a combinator
 
-from dataclasses     import dataclass
+from dataclasses import dataclass
 
 from combinators import (Parser, ParseResult, Success, parse, failed, do, fmap,
                          seq, follows, between, interleave,
