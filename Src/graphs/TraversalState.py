@@ -8,7 +8,7 @@ class NodeIs(Enum):
     PROCESSED = 2
 
 class TraversalState:
-    """Encapsulates node information accumulated during a traversal.
+    """Encapsulates information accumulated during a graph traversal.
     Offers convenience methods for manipulating that information.
 
     We maintain several features for each node:

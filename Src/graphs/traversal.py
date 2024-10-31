@@ -24,6 +24,39 @@ def traverse(
         node_store='Stack',
         node_priority='priority'
 ) -> TraversalState:
+    """Traverses a graph with a specified strategy, running given actions at each step.
+
+    Parameters:
+
+    graph: Graph
+        -- an undirected node- and edge-labeled graph
+
+    start: Any
+        -- the starting node for the traversal
+
+    acc: Any [=None]
+        -- an optional accumulator to be used by the action functions
+
+    before_node : Graph -> NodeId -> TraversalState -> TraversalState
+        -- action run when a node is first visited
+
+    after_node : Graph -> NodeId -> TraversalState -> TraversalState
+        -- action run when a node's neighbors are all visited
+
+    on_edge : Graph -> source@NodeId -> target@NodeId -> TraversalState -> TraversalState
+        -- action run when an edge is first traversed from source to target.
+   
+    node_store: str | NodeStore [='Stack']
+        -- the store for nodes to manage the traversal
+
+    node_priority: str
+        -- the node property key associated with a node's priority score
+
+    Returns a TraversalState object, which contains the final accumulator,
+    the traversal tree, and other information. This can also be used to continue
+    a traversal, e.g., on another connected component.
+
+    """
     if state is None:
         state = TraversalState(graph.nodes, acc)
     remaining_nodes = node_store_factory(node_store)
