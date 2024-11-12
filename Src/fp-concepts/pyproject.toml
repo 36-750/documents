@@ -1,0 +1,99 @@
+[project]
+name = "fp-concepts"
+dynamic = ["version"]
+description = "Functional Programming concepts playground"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name = "Christopher R. Genovese", email = "genovese@cmu.edu" }
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "hypothesis>=6.118.0",
+    "pytest>=8.3.3",
+    "ruff>=0.7.2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/fp_concepts/__about__.py"
+
+[[tool.hatch.envs.all.matrix]]
+python = ["3.12", "3.13"]
+
+[tool.black]
+target-version = ["py312"]
+line-length = 120
+skip-string-normalization = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+lint.select = [
+  "A",
+  "ARG",
+  "B",
+  "C",
+  "DTZ",
+  "E",
+  "EM",
+  "F",
+  "FBT",
+  "I",
+  "ICN",
+  "ISC",
+  "N",
+  "PLC",
+  "PLE",
+  "PLR",
+  "PLW",
+  "Q",
+  "RUF",
+  "S",
+  "T",
+  "TID",
+  "UP",
+  "W",
+  "YTT",
+]
+
+lint.ignore = [
+  # My ignores
+  "I001", "EM101", "Q000", "E501", "N999", # Ruff doesn't support "E241", "E272", "E302", "E305", "W504",
+  # Allow non-abstract empty methods in abstract base classes
+  "B027",
+  # Allow boolean positional values in function calls, like `dict.get(... True)`
+  "FBT003",
+  # Ignore checks for possible passwords
+  "S105", "S106", "S107",
+  # Ignore complexity
+  "C901", "PLR0911", "PLR0912", "PLR0913", "PLR0915",
+]
+
+lint.unfixable = [
+  # Don't touch unused imports
+  "F401",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can use magic values, assertions, and relative imports
+"tests/**/*" = ["PLR2004", "S101", "TID252"]
+
+[tool.ruff.lint.isort]
+section-order = ["future", "standard-library", "first-party", "local-folder", "third-party"]
+lines-between-types = 1
+lines-after-imports = 1
