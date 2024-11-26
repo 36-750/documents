@@ -1,0 +1,857 @@
+#+TITLE: Architecture, Hardware, and Compilation
+#+SUBTITLE: Lecture 24
+#+DATE: Tue 26 Nov 2024
+
+* Comments on Tooling
+
+  + nushell
+  + fzf  (see also zoxid)
+  + difftastic
+  + httpie (also curl)
+  + jq
+  + ripgrep
+  + rsync
+  + curl cheat.sh
+
+  Honorable mention replacements for common commands:
+  + ov
+  + exa
+  + bat
+  + rip (rm-improved)
+
+  See also:
+  + https://github.com/alebcay/awesome-shell
+  + https://github.com/agarrharr/awesome-cli-apps
+  + https://github.com/k4m4/terminals-are-sexy
+
+* Architecture and Hardware
+
+For high-performance computing, we cannot focus solely on software
+but also on the *hardware* on which the software runs. The interaction
+of hardware architecture and software can have a drastic impact
+on performance in highly critical code.
+
+** A Simple Model
+
+   We'll start with the three main components of the computer's architecture:
+
+   + *Processor* :: The main controller of all computations in the system.
+     We will focus here on the *CPU*, or Central Processing Unit.
+
+   + *Memory* :: Fast and volatile storage of data while the computer
+     is running. We will focus here on *RAM*, Random Access Memory.
+
+   + *Peripherals* :: External devices that interact with the computer,
+     including terminals, disks, network hardware, and so on.
+     We will focus here on the *Disk*, which provides long-term stable
+     data storage. Most modern disks are fast /solid-state/ devices,
+     but older/slower /hard disks/ are still in use. Data on the Disk
+     persists even when power is shut off, and storage capacity
+     is typically substantially greater than the computer's memory
+     (e.g., 10^12 > 10^10 bytes).
+
+   The data flow in the system is loosely described by:
+
+   #+begin_example
+      CPU <--> RAM <--> Disk
+   #+end_example
+
+   We will add some components to this picture as we proceed.
+
+** Strengths and Weaknesses
+   
+   CPUs behavior is governed by a ``clock'' that ticks like
+   a metronome roughly three billion times per second.
+   We can use *clock cycles* as a measure of the relative timing
+   of various events.
+
+   CPUs execute /instructions/. Each instruction is very low-level: add these
+   numbers, move this to memory, jump to these other instructions in memory, load
+   a number from memory, etc.
+  
+   Everything that runs on your computer is eventually turned into these
+   instructions. They can be written in textual form as /assembly language/:
+  
+   #+BEGIN_SRC asm
+     pushq   %rbp
+     movq    %rsp, %rbp
+     addq    %rsi, %rdi
+     movq    %rdi, %rax
+     popq    %rbp
+     ret
+   #+end_src
+  
+   This is the code for a function adding two integers. We push the function
+   pointer onto the stack, shuffle some values around, add two values, pop off
+   the stack, and return.
+  
+   The names (=%rbp=, =%rax=, etc.) refer to *registers*: named cells of fast memory inside
+   the processor. Registers are blazing fast, but each can only hold small values
+   (usually 64 bits), and there are a limited number. Most all instructions work on
+   values in registers, so other instructions have to load registers from main
+   memory, store their values back to memory, et cetera.
+
+   For example, [[https://viralinstruction.com/posts/hardware/][here]] are typical costs for various common
+   CPU operations/instructions, measured in clock cycles.
+
+   | Instruction           | Latency | 1/Throughput |
+   |-----------------------+---------+--------------|
+   | move                  |       1 |         0.25 |
+   | and/or/xor            |       1 |         0.25 |
+   | test/compare          |       1 |         0.25 |
+   | noop                  |       1 |         0.25 |
+   | int add/sub           |       1 |         0.25 |
+   | bitshift              |       1 |          0.5 |
+   | float mult            |       5 |          0.5 |
+   | vector int and/or/xor |       1 |          0.5 |
+   | vector int add/sub    |       1 |          0.5 |
+   | vector float add/sub  |       4 |          0.5 |
+   | vector float mult.    |       5 |          0.5 |
+   | lea                   |       3 |            1 |
+   | int mult              |       3 |            1 |
+   | float add/sub         |       3 |            1 |
+   | float mult            |       5 |            1 |
+   | float div             |      15 |            5 |
+   | vector float div      |      13 |            8 |
+   | integer div           |      50 |           40 |
+   |-----------------------+---------+--------------|
+
+   1/Throughput != Latency because of built-in batching
+   and parallelism in the CPU. Ex: if an operation takes
+   5 clock cycles but 10 ops can be done in parallel,
+   we get 1/Throughput = 0.5 cycles/op.
+
+   (Note: lea computes x a + b where x = 1, 2, 4, or 8.)
+
+
+   RAM access is substantially slower than CPU operations,
+   say around 500 clock cycles for a memory access
+   on typical hardware, give or take.
+
+   Disk access is even slower, with SSD latencies thousands of
+   times larger than RAM. (And hard disks slower by at
+   least an order of magnitude.)
+
+   This suggests a useful first principle in critical code:
+
+   *Avoid disk access whenever possible*
+   
+** Caches
+
+   The situation is a little more complicated because
+   both the CPU and the Disk have *caches* to store
+   data for quicker access.
+
+   Some of the data read from the disk is stored in the
+   disk access, making subsequent access of that same
+   information faster on subsequent times.
+
+   The CPU has specialized, fast cache memory on situated directly
+   on the CPU chip that stores data for repeated access. (Cache is
+   different than registers, though both are fast and limited.)
+   Accessing cache typically takes 1-3 clock cycles, so it's
+   a big difference from RAM.
+
+   So our picture becomes
+   
+   #+begin_example
+      CPU <--> Registers <--> CPU Cache(s) <--> RAM <--> Disk Cache <--> Disk
+   #+end_example
+
+   CPU caches in a hierarchy called L1, L2, L3, etc., in decreasing
+   order of speed (and often increasing order of size). The speed is
+   partly from proximity (reduced delays in transmission) and partly
+   from the cost/sophistication of the circuitry (static RAM versus
+   the dynamic RAM of main memory).
+
+   The processor automatically manages the cache. You can't directly manipulate
+   it with your code. The cache contains copies of frequently used chunks of
+   memory, automatically discarding the least recently used chunks to make space
+   for new ones. When your program uses a certain memory location, an entire
+   chunk of memory containing that location is copied into the cache.
+
+   If the data that you are operating on all fits in the cache,
+   the calculation will be extremely fast.
+
+   If you need data that is not in the cache -- called a *cache miss* -- the
+   processor needs to get the data from memory, which is effectively
+   a penalty on the order of 500 clock cycles.
+
+   This gives a second principle: *effective use of the cache depends on locality*:
+
+   + Temporal Locality :: if you access the same data multiple times
+     where those times are close together.
+
+   + Spatial Locality :: if you access multiple memory addresses where
+     those addresses are close together.
+
+   Data from nearby addresses all loaded into the cache and accessed multiple
+   times without a cache miss gives good performance.
+   
+   This is why it can be faster to iterate over a matrix in the right order. In
+   R, matrices are stored in column-major order: the matrix
+
+   #+BEGIN_EXAMPLE
+     1 2 3
+     4 5 6
+   #+END_EXAMPLE
+
+   is actually stored in memory as =1 4 2 5 3 6=. If we iterate over the whole
+   matrix, one column at a time, contiguous chunks of the matrix can be loaded
+   into the cache. But if we iterate over rows, we keep skipping from one memory
+   location to one far away, and new chunks have to be brought in from main
+   memory -- cache misses -- making the loop much slower.
+
+   (Numpy for Python stores arrays in row-major order by default, so the
+   opposite is true there.)
+
+** Prediction Circuitry: Prefetching
+
+   Modern CPUs have a number of bells and whistles that can affect
+   critical performance.
+
+   One of these is the *prefetcher* -- a circuit that looks for patterns
+   of memory access and attempts to pre-fetch data based on that
+   prediction (in parallel) so that the data is in cache when
+   the CPU needs it.
+
+   So code that accesses memory in a predictable pattern can
+   get improved cache utilization even if locality suffers somewhat.
+
+** Cache overview
+
+   In performance-critical parts of our computation we want to:
+
+   + Use less data, ideally fitting into the cache
+   + Access data that is close together in memory
+   + When accessing data multiple times, do so closely together in time.
+   + Access memory in a predictable way.
+
+   Cache performance can conflict with typical algorithmic choices.
+   For instance, hash tables/dictionaries allow you to lookup
+   values in O(1) time, but their locality is -- almost by design --
+   not good. A slower lookup with locality and predictability
+   might be more performant in critical loops.
+
+   NB! This does *not* mean to avoid dictionaries in general.
+   Remember: "premature optimization..."
+
+   Another example where things are relevant: objects and
+   boxed values are stored as /references/, requirng an
+   extra non-local access to get their value.
+
+** Alignment
+
+   When the CPU moves data to the cache it does not move individual
+   values but /chunks/ of data, often called *cache lines*, e.g., 64 bytes.
+
+   Think of RAM as being partitioned into cache lines. If the data
+   that you are accessing is *aligned* with these partitions,
+   the chunk you need will be in cache. If not, you will
+   generate a cache miss and refresh as you access your data.
+
+   Ex: looping repeatedly over an array that straddles a cache line
+   boundary.
+
+   Where possible, we want to keep our data aligned to these
+   boundaries, but we usually have limited control.
+
+   Fortunately, compilers are aware of this and often
+   attempt to optimize data alignment.
+   
+
+   Ex: Consider an array of records that you are accessing repeatedly.
+   The compiler may pack those records to keep them nicely aligned.
+
+   But if you are accessing only one field repeatedly, you could
+   miss the cache. Might consider extracting that field into
+   an aligned array for better performance in a critical section.
+
+** Stack and Heap
+
+   The *stack* is a linear region of memory that can be accessed
+   quickly at one location (the stack pointer), where information
+   can be /pushed/ and /popped/.
+
+   Ex: when you call a function, the arguments and local variables
+   in the function are pushed on the stack for quick access,
+   and popped off when the function returns, leaving its return
+   value on the stack for the calling function.
+
+   Objects that are reasonably small and of (roughly) known size
+   for which the compiler can determine/predict its lifetime
+   can go on the stack.
+
+   But not everything goes (or can fit) on the stack.
+   Data that is /allocated/ is said to be on the *heap*.
+
+   Allocation *takes time* and *requires management*.
+   There are different strategies for managing memory,
+   from user-controlled allocation (C/C++), to
+   ownership types (Rust), to *garbage collection* (R, Python,
+   Java, and many others).
+
+   Garbage collection is the process of finding memory that is no
+   longer being used and reclaiming it, compacting as it can. This
+   happens periodically and so has an amortized performance impact.
+   But it also frees the programmer from worrying about memory
+   allocation and can reduce bugs. So it's a trade-off.
+
+   One other benefit of *immutability* is that compilers can sometimes
+   optimize by putting immutable objects on the stack,
+   eliminating an indirect reference and improving locality.
+   Immutable objects can be freely copied and do not suffer
+   from "aliasing" that can interfere with optimizations,
+   so they can allow additional optimizations as well.
+
+** Registers and Vector Operations
+
+   Registers are very fast and very limited. Sometimes, however,
+   code can be expressed through *vector instructions* that
+   operate on several registers simultaneously and in parallel.
+   This SIMD (Single Instruction, Multiple Data) vectorization
+   is one of the bells and whistles in some modern CPUs.
+
+   SIMD vectorization needs uninterrupted iteration of
+   fixed (and known) length because the sizes of the "vectors"
+   are constrained.
+
+   In critical sections, loops with fixed length and no branches
+   (ifs/breaks/etc) are more likely to be vectorized. Note that
+   automatic bounds checking on arrays (as in Python) can interfere
+   with this process. In some languages, you can give the compiler
+   hints ("pragmas") for where vectorization might help. But overall
+   compilers have gotten quite sophisticated.
+
+** Branch Prediction
+
+   Another feature of modern CPUs is they queue up instructions
+   and try to predict what will come next. The big issue
+   are branches that cause a jump to a new part of the code.
+
+   *Branch prediction* attempts to predict this and prepare
+   the queue accordingly.  When it succeeds, branches
+   are fast and smoother. When it fails, the queue needs
+   to be reset at some cost.
+
+   Simple loops are good examples. In a long loop, predicting
+   the jump back into the loop will be correct most of the
+   time.
+
+   There are a variety of other optimizations, like inlining
+   functions, functionalizing branches, and unrolling loops
+   that can have an impact. But these are data-driven
+   last resorts in critical sections only.
+
+   Things are a little more complicated. The instructions
+   are translated into a lower-level *microcode* and
+   buffered in an internal array called the *reorder buffer*.
+   This allows parallelized operations, and predictions
+   influence how the buffer is set up before being
+   shipped into memory for execution.
+
+   This has several implications, including:
+
+   + Think of your code as being executed, not one instruction at a time,
+     but in chunks and frequently in parallel. The parallelizability
+     of the instructions thus influences performance. Slower instructions
+     can sometimes be more parallelizable.
+
+   + Branch prediction is also done in chunks, not just one branch at 
+     a time but for several in the dim future.
+
+   + Misprediction requires resetting the reorder buffer
+     which causes a nontrivial delay.  
+
+** GPUs
+
+   Parallel and concurrent programming can be effective in improving
+   performance in some algorithms and situations, but in general
+   it is an order of magnitude harder to get right, at least.
+
+   Some situations, however, are *embarassingly parallel* with
+   problem that can be decomposed and delegated very efficiently.
+
+   GPUs (Graphical Processing Units) are matrices of simpler chips that
+   are optimized for such highly parallel computations at scale.
+
+   While individually GPUs are slower and less sophisticated in design
+   than CPUs, they are used in /large numbers/. For certain types of
+   calculations, GPUs can provide exceptional performance.
+
+* Interpreters and Compilers
+
+Standard R and Python advice -- or any other dynamic language, like Ruby or
+PHP -- is to write performance-critical code in C or C++. Use built-in
+vectorized functions, write hot loops in Rcpp or Cython, and rely on external
+libraries as much as possible.
+
+But why should R and Python be so much slower than C?
+
+[[../Figures/which-programs-are-fastest-firstlast.svg]]
+
+[[../Figures/which-programs-are-fastest-middle.svg]]
+
+What we just saw about architecture explains this in part when
+we see how this interacts with programming language
+design, use of interpreters and compilers, 
+and features of the runtime.
+
+Let's look at how our programming languages get turned into programs.
+There are two key distinctions here:
+
++ A *compiler* translates code from one language to another, producing
+  a set of instructions in the target language.
+
++ An *interpreter* runs code directly, it may or may not involve some
+  compilation steps in the process.
+
+** Interpreters, ASTs, JITs, VMs, and more
+
+  Interpreted languages like R and Python are not translated into machine code
+  -- there is no compiler that turns R into assembly code. Instead, they run
+  with the help of an /interpreter/.
+
+*** But why not compile?
+
+   Operations in a high-level language don't directly correspond to machine
+   instructions. Consider:
+
+   #+BEGIN_SRC r
+     add <- function(x, y) { x + y }
+   #+end_src
+
+   An innocuous function. But:
+
+   - =x= and =y= might be numbers, which can be added by the processors.
+
+   - =x= and =y= might be vectors, which have to be added elementwise. One might be
+     shorter than the other, which has to be checked and handled. We'll have to
+     allocate a vector to store the result.
+
+   - =x= and =y= may be S4 classes with a special + method defined for them (like
+     the hyperreal numbers I showed in class). We may need to allocate memory
+     for the results, tracking this memory with the garbage collector.
+
+   - =x= and =y= may be objects for which addition is not defined.
+
+   *None of this is known until the program runs.*  When R sees "+", it has to
+   check which of these is true, and potentially do some very complex processing
+   (like for S4 classes). Running + means loading =x= and =y=, checking their types,
+   determining which operation is appropriate, and then invoking the relevant
+   code.
+
+   We could turn this into machine code -- very long, very tedious machine code
+   -- but there's no point. Instead, we write a program which reads the code and
+   executes it. The program is, in effect, pretending to be a computer processor
+   that understands R.
+
+*** Simple interpreters
+
+   Interpreting starts by turning the source code into a /parse tree/ or
+   /abstract syntax tree/ (AST), data structures representing the meaning of the
+   code. In R, you can find the AST for code using the =lobstr= package
+   (specifically the =lobstr::ast= function) along with the =rlang= package.
+   See sections 17-21 [[https://adv-r.hadley.nz/meta-big-picture.html][here]] for lots of details.
+
+   #+begin_example
+     > lobstr::ast(function(x, y) { x + y })
+      
+     █─`function`
+     ├─█─x = ``
+     │ └─y = ``
+     ├─█─`{`
+     │ └─█─`+`
+     │   ├─x
+     │   └─y
+     └─<inline srcref>
+   #+end_example
+
+   And similarly
+
+   #+begin_example
+     > lobstr::ast(f(g(1, 2), h(3, 4, i())))
+     █─f 
+     ├─█─g 
+     │ ├─1 
+     │ └─2 
+     └─█─h 
+       ├─3 
+       ├─4 
+       └─█─i
+   #+end_example
+
+   Here's another AST for our =add= function, as printed by the =pryr= package:
+
+   #+begin_example
+     > ast(function(x, y) { x + y } )
+     \- ()
+       \- `function
+       \- []
+         \ x =`MISSING
+         \ y =`MISSING
+       \- ()
+         \- `{
+         \- ()
+           \- `+
+           \- `x
+           \- `y
+       \- <srcref>
+   #+end_example
+
+   This is just a textual representation. The built-in =quote= function returns
+   this representation as an R list: you can process the list to retrieve the
+   function calls, arguments, and so on:
+
+   #+BEGIN_EXAMPLE
+     > foo <- quote(function(x, y) { x + y } )
+     > foo[[1]]
+     `function`
+     > foo[[2]]
+     $x
+
+     $y
+
+     > foo[[3]][[1]]
+     `{`
+   #+END_EXAMPLE
+
+   But I recommend using the cleaner tools from the =rlang= package for this.
+   In particular, see =expr=, =eval=, and the unquote =!!=.
+
+   The simplest possible interpreters simply read in the AST and operate on
+   it. These are known as /AST walkers/.
+
+   AST walking is dead simple: read in the code piece by piece and do what it
+   says. If it references a variable, look up the variable in a table and find
+   its value; if it has a mathematical expression, fill out the values and
+   calculate it. You could write R code that interprets R code by taking the
+   output of =quote= and reading through it, element by element.
+
+   AST walking is also usually slow. Everything is referred to by name
+   (variables, functions, objects, etc.), so everything has to be looked up in a
+   set of tables (to determine what's in scope) every time it's accessed.
+   There's a lot of overhead. The processor's cache is filled with AST data,
+   variable scope tables, garbage collector data, and other stuff that's not
+   your code or your data.
+
+**** Aside: Functions that transform code
+
+    Hang on -- if you can turn R code into an AST, and then read and even modify
+    that AST, can you write functions that take /code/ and return /new code/?
+
+    Yes.  
+
+    This is a bit painful in base R, since we have to work with deeply nested lists.
+    But =lobstr= and =rlang= makes it much easier. See the extended example
+    of walking ast's [[https://adv-r.hadley.nz/expressions.html#ast-funs][here]].
+
+    Still, it's entirely possible in base R. Imagine a function like this:
+
+    #+begin_src R
+      ## Recurse deeply into an AST object, applying the provided function
+      ## to elements that are numerics
+      replace_numeric <- function(ast, fn) {
+          if (is.name(ast) || is.pairlist(ast) || inherits(ast, "srcref")) {
+              return(ast)
+          } else if (is.call(ast)) {
+              replaced <- sapply(as.list(ast),
+                                 function(el) { replace_numeric(el, fn) })
+              return(as.call(replaced))
+          } else if (is.numeric(ast)) {
+              return(fn(ast))
+          } else {
+              return(ast)
+          }
+      }
+
+      randomize_constants <- function(const) {
+          const + rnorm(1)
+      }
+
+      foo <- quote(function(x) { x + 4 })
+
+      bar <- replace_numeric(foo, randomize_constants)
+
+      bar
+      ## function(x) {
+      ##    x + 3.64477015719487
+      ##}
+    #+end_src
+
+    Now, =foo= and =bar= are both AST objects, not functions, but we can evaluate
+    these trees and turn them back into functions with =eval=:
+
+    #+begin_src R
+      foo_fn <- eval(foo)
+      bar_fn <- eval(bar)
+
+      foo_fn(4)  #=> 8
+      bar_fn(4)  #=> 7.64477
+    #+end_src
+
+    Why might it be useful to rewrite code like this? In R, it's not usually a
+    good idea. Changing how the language works can be confusing. It's tough to
+    write a good code-mangling function -- you have to handle the AST properly.
+
+    But in other languages, functions that modify code are common -- even part
+    of the core language. Consider Lisp and its derivatives (Scheme, Clojure,
+    Racket, etc.). You've seen some examples where code is written in a weird
+    notation with lots of parentheses:
+
+    #+begin_src scheme
+      (/ (+ (- b) (sqrt (- (expt b 2) (* 4 a c))))
+         (* 2 a))
+    #+end_src
+
+    But this notation reveals an elegant advantage. The notation for a list -- a
+    linked list of elements -- is just
+
+    #+begin_src scheme
+      '(1 2 3 4 5 6)
+    #+end_src
+
+    The ' at the front is the =quote= operator -- sound familiar? =quote= tells Lisp
+    that this is a bare list. If there is no quote, as in
+
+    #+begin_src scheme
+      (* 2 a)
+    #+end_src
+
+    Lisp takes the list, assumes the first element is a function, and applies it
+    to with the remaining elements as arguments. So we can write
+
+    #+begin_src scheme
+      '(/ (+ (- b) (sqrt (- (expt b 2) (* 4 a c))))
+          (* 2 a))
+    #+end_src
+
+    with the quote, and this returns a /list/ representing the code. Just like
+    code can operate on lists, it can operate on code, returning new lists that
+    are also code.
+
+    Users of Scheme and Lisp-like languages like Clojure, Racket,
+    and Common Lisp often write *macros* that take their arguments as
+    lists of code and return new code, to do useful things, letting
+    them essentially build their own programming language. When
+    could this be useful? Imagine doing some operation on every row
+    of results from an SQL query:
+
+    #+begin_src lisp
+      (doquery (:select 'x 'y :from 'some-imaginary-table) (x y)
+        (format t "On this row, x = ~A and y = ~A.~%" x y))
+    #+end_src
+
+    Here =doquery= is a macro which takes a query, names the resulting columns,
+    and executes a piece of code once for every row, using the values from each
+    column. When the code is /read/ -- not when it runs -- the =doquery= macro runs
+    and transforms this code into the full code needed to convert this to an SQL
+    query, send it to the database, and do the loop over the results.
+
+    (This example is from [[http://marijnhaverbeke.nl/postmodern/][Postmodern]], a PostgreSQL package for Common Lisp.)
+
+    The key lesson: *code is data*. Interpreters and compilers are just programs
+    that work on code as their data.
+
+*** Bytecode and virtual machines
+
+   Before compiling, the next-best option is to produce /bytecode/, which is
+   almost, but not quite, entirely unlike assembly language. Bytecode is a set
+   of instructions for a /virtual machine/ -- a hypothetical CPU. Instead of
+   having the typical operations your CPU provides, this hypothetical CPU has
+   instructions that do the types of things your programming language needs. For
+   example, here's some Python bytecode for a function called =min(x, y)=:
+
+   #+BEGIN_EXAMPLE
+       2           0 LOAD_FAST                0 (x)
+                   3 LOAD_FAST                1 (y)
+                   6 COMPARE_OP               0 (<)
+                   9 POP_JUMP_IF_FALSE       16
+
+       3          12 LOAD_FAST                0 (x)
+                  15 RETURN_VALUE
+
+       5     >>   16 LOAD_FAST                1 (y)
+                  19 RETURN_VALUE
+                  20 LOAD_CONST               0 (None)
+                  23 RETURN_VALUE
+   #+END_EXAMPLE
+
+   Python's hypothetical processor is a /stack machine/: each instruction takes
+   arguments off the stack and pushes results onto the stack. The two =LOAD_FAST=
+   instructions push the arguments onto the stack, and =COMPARE_OP= compares them
+   and pushes True or False onto the stack, and so on.
+
+   Instead of parsing the code into an AST and stopping, the AST has to be
+   converted into bytecode. Notice the bytecode doesn't reference variables by
+   name, so variable accesses and lookups are faster. (This is why global
+   variables are slow in languages like Python: function arguments are known
+   when the function is parsed, so they can be pushed on the stack easily, but
+   globals are only know when the function runs, so the interpreter has to look
+   them up in a table every time.)
+
+   Stack machines are easy to write but require shuffling data around on the
+   stack, which may require extra instructions and overhead. Consider a simple
+   Scheme function in the Guile interpreter:
+
+   #+begin_src scheme
+     (lambda (x y)
+       (let ((z (+ x y)))
+         (* z z)))
+   #+end_src
+
+   In bytecode, it is:
+
+   #+BEGIN_EXAMPLE
+     > ,disassemble (lambda (x y)
+                      (let ((z (+ x y)))
+                        (* z z)))
+
+        0    (assert-nargs-ee/locals 10)     ;; 2 args, 1 local
+        2    (local-ref 0)                   ;; `x'
+        4    (local-ref 1)                   ;; `y'
+        6    (add)
+        7    (local-set 2)                   ;; `z'
+        9    (local-ref 2)                   ;; `z'
+       11    (local-ref 2)                   ;; `z'
+       13    (mul)
+       14    (return)
+   #+END_EXAMPLE
+
+   We push the two arguments onto the stack, add them, name the result, push it
+   onto the stack twice, multiply, and then return the result. This is
+   inefficient -- only two of the instructions are actual math.
+
+   Other languages, like Lua (and more recent Guile versions), use a
+   register-based VM with named locations for storing data, more like actual
+   processors use.
+
+   Lots of languages run on bytecode: Python, Java, PHP, Lua, C#, and many
+   others.
+
+   R gained a bytecode compiler several years ago, and base R functions are
+   bytecode-compiled. This gives a modest speed benefit over the default AST
+   walker.
+
+*** Optimizers
+
+   Because bytecode is intended to be a simple set of core instructions, it's
+   easier to optimize. The interpreter can pattern-match certain sets of
+   bytecode and replace them with more efficient constructions. This is known as
+   /peephole optimization/, because the optimizer only looks at a few
+   instructions at a time.
+
+   Bytecode optimization can be combined with other types of optimization which
+   use knowledge of the AST and the control flow in the program:
+
+   - Constant folding :: Constant expressions (like =1/sqrt(2 * pi)=) can be
+        recognized and evaluated in advance, instead of evaluated every time the
+        code runs.
+   - Loop invariant code motion :: Expressions inside a loop which do not change
+        from one iteration to the next are pulled out, so they are only
+        calculated once.
+   - Constant subexpression elimination :: If the same expression appears
+        multiple times, it can be calculated once and stored to a temporary
+        variable.
+   - Dead code elimination :: Calculations whose results are not used can be
+        skipped entirely.
+
+   - Register allocation ::   Compilers work hard to allocate
+        registers, since you usually have way more variables than
+        registers. Running out of registers and having to move stuff in
+        and out of RAM ("spilling") is inefficient.
+
+   There are many others. Sophisticated compilers do dozens of separate
+   optimization passes; bytecode interpreters like Python are usually much less
+   sophisticated, since fancy optimization delays execution. LLVM, a framework
+   for building compilers, has an industrial-strength optimization system, as
+   does GCC.
+
+*** Just-in-time compilation
+
+   It's hard to produce efficient machine code for an interpreted language
+   because any variable could have any type -- a number, a list, an object with
+   overloaded operators, whatever. Many types of optimization aren't feasible.
+
+   But sometimes the interpreter can deduce the possible types. It might observe
+   the program running and see what types are common, or use /type inference/
+   using the code it can see. What then?
+
+   In /just-in-time compilation/, the interpreter recognizes when the types of
+   variables are known and generates specialized machine code for them. JITed
+   languages include Java, C#, JavaScript, Julia, and even Python with the [[http://pypy.org/][PyPy]]
+   system.
+
+   This compilation adds overhead: the interpreter does extra work recognizing
+   when code can be JIT compiled, but saves time interpreting that code.
+
+** Compiling to machine code
+
+  C, C++, Common Lisp, Go, Haskell, OCaml and many others can be compiled
+  directly to machine code instead of run by an interpreter.
+
+  Ahead-of-time (AOT) compilation changes the tradeoffs. An AOT compiler can
+  spend massive amounts of time optimizing code, since the optimization only
+  happens once. A JIT compiler needs to work as fast as possible so the program
+  isn't slowed down by compilation. An AOT compiler can analyze the entire
+  program at once, inferring data types and properties to make better
+  optimization decisions. AOT compilers can even use /profile-guided
+  optimization/ (PGO), which involves running the program and observing its
+  behavior to make better optimization decisions.
+
+** CUDA and GPUs
+
+   GPU architecture differs from CPU architectures, so writing code for
+   GPUs involves some special structure.
+
+   CUDA (Compute Unified Device Architecture) by Nvidia is an
+   *application programming interface* (API) and platform for
+   general-purpose programming of GPUs. (It is typically used with
+   Nvidia chips.)
+
+   Example: =hello-world.cu=
+
+   #+begin_src c
+       #include <stdio.h>
+        
+       __global__ void helloCUDA() {
+           printf("Hello, CUDA!\n");
+       }
+        
+       int main() {
+           helloCUDA<<<1, 1>>>();
+           cudaDeviceSynchronize();
+           return 0;
+       }     
+   #+end_src
+
+   Both Python and R have support for GPU programming at various
+   levels of abstraction, both for general-purpose numerical computing
+   and for neural nets.
+
+   Python:
+   + CuPy  :: numpy replacement for CUDA
+   + Numba :: lower-level CUDA control
+   + scikit-cuda :: interfaces to CUDA libraries
+   + CUDA Python :: Nvidia API
+   + PyTorch / TensorFlow :: neural nets and computation graphs
+
+   R, See https://cran.r-project.org/web/views/HighPerformanceComputing.html
+
+   Note also: Rcpp, rJava, and reticulate
+
+* Resources
+
+  - [[http://norvig.com/lispy.html][(How to Write a (Lisp) Interpreter (in Python))]], Peter Norvig's tutorial on
+    writing a simple parser and interpreter in Python.
+  - [[https://beautifulracket.com/][Beautiful Racket]] by Matthew Flatt, an accessible and well-written guide to writing
+    languages and DSLs, starting from the ground floor.
+  - [[https://wespiser.com/writings/wyas/00_overview.html][Write Yourself a Scheme in 48 hours]] (also an [[https://en.wikibooks.org/wiki/Write_Yourself_a_Scheme_in_48_Hours][older version]]), a
+    more intense introduction to using Haskell to interpret Scheme.
+  - [[https://jakevdp.github.io/blog/2014/05/09/why-python-is-slow/][Why Python is Slow]]
+  - Andy Wingo's blog post [[https://wingolog.org/archives/2013/11/26/a-register-vm-for-guile][A Register VM for Guile]], explaining the internal
+    details of one kind of VM.
+  - [[https://viralinstruction.com/posts/hardware/][Hardware for Scientists]] (Julia based), nice overview
+  - [[http://www.extremetech.com/extreme/188776-how-l1-and-l2-cpu-caches-work-and-why-theyre-an-essential-part-of-modern-chips][How L1 and L2 CPU caches work, and why they’re an essential part of modern chips]]
+  - [[https://craftinginterpreters.com/][Crafting Interpreters]] by Robert Nystrom
+  - [[https://github.com/36-750/problem-bank/blob/master/All/stackit.pdf][stackit]] in the problem bank
