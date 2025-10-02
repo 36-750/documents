@@ -1,0 +1,97 @@
+#+TITLE: Team Activity
+#+SUBTITLE: Session #12
+#+DATE: 02 Oct 2025
+
+* Announcments
+
+  - Next assignment **classification-trees-basic*, due **Thu 24 Oct**.
+
+* Task
+
+  We have a board that is a grid of capital letters and a list of words
+  to search for. We look for all words in the list in the grid by
+  moving in paths with 4- or 8-neighbor adjacency (start with 4).
+  We cannot reuse a letter in a word.  Return the list of all
+  words from the original list that were found.
+
+  Sample board:
+
+      NORL
+      ORMA
+      ACBP
+
+  The board and list of words are given in files, either one file
+  or two as you decide.
+
+* Brief Discussion, Key Concepts, and Group Planning
+
+
+* Sub-group Tasks
+** Construct Tests (group or all)
+
+   - Decide on file format (for other groups)
+   - Build Test Cases as files
+   - Wrap Tests in a Testing Framework
+
+** Driver
+
+   A command line driver that that takes files for the board and word list
+   (one file or two). 
+
+   | Task                         |
+   |------------------------------|
+   | Create board                 |
+   | Create trie                  |
+   | Run top-level search         |
+   | Output Results               |
+   | Support --help/--version etc |
+   |------------------------------|
+
+   Might include an option for four or eight neighbor rules.  Make four the default for now.
+** Search Board
+
+   =Loc = (Int, Int)=
+
+
+   | Task       | Notes                                                                 |
+   |------------+-----------------------------------------------------------------------|
+   | /design/     | Find an appropriate representation of the board as a data structure   |
+   | /initialize/ | Create a search grid from an input file                               |
+   |            | inserts a string in a trie : Trie -> String -> Trie                   |
+   | neighbors  | Find neighbors of current location (can return vector, sequence, ...) |
+   |            | : Int -> Int -> Set Loc -> Loc -> List Loc                            |
+   |            | neighbors nrows ncols visited loc                                     |
+   |------------+-----------------------------------------------------------------------|
+
+** Word List
+
+   Trie data structure.  What is its type?
+
+   | Task        | Notes                                                       |
+   |-------------+-------------------------------------------------------------|
+   | /design/      | How to represent the trie                                   |
+   | /constructor/ | This can be a class or just a function interface            |
+   | insert      | inserts a string in a trie                                  |
+   |             | : Trie -> String -> Trie                                    |
+   | search      | is a word in a trie?                                        |
+   |             | : Trie -> String -> Bool                                    |
+   | startsWith  | is a prefix in a trie?                                      |
+   |             | : Trie -> String -> Bool                                    |
+   | subStep     | gets the trie (if exists) at the next step from a character |
+   |             | : Trie -> Char -> Maybe Trie                                |
+   | build       | build a trie from a list of words                           |
+   |             | : List String -> Trie                                       |
+   |-------------+-------------------------------------------------------------|
+   
+** Search
+
+   | Task      | Notes                                                           |
+   |-----------+-----------------------------------------------------------------|
+   | /plan/      | What is the algorithm?                                          |
+   | findWords | Top-level search                                                |
+   |           | : Board -> List String -> List String                           |
+   | search    | Low-level search in a board                                     |
+   |           | :  Tree -> Set Loc -> String -> Loc -> Set String -> Set String |
+   |           | search trie visited current loc seenWords                       |
+   |-----------+-----------------------------------------------------------------|
+   

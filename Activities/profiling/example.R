@@ -15,9 +15,9 @@ summaryRprof("profiling.out")
 
 ## Call graph with the prof.tree package
 
-library(prof.tree)
-
-prof.tree("profiling.out")
+# library(prof.tree)
+#  
+# prof.tree("profiling.out")
 
 ## Interactive with profvis
 
