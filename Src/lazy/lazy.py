@@ -33,7 +33,7 @@ class Chunked[A]:
 # Abstract Base Class
 #
 
-class BaseLazyStream[A]:
+class BaseLazyList[A]:
     def __init__(self, f: Callable, init: list[A] = []):
         self.realized: list[A] = init[:]  # Copy in case of default
         self.pushback: list[A] = []       # Stored in reverse order
@@ -107,7 +107,7 @@ class BaseLazyStream[A]:
 # General Lazy Sequence, the supplied code is nullary
 #
 
-class LazyStream[A](BaseLazyStream[A]):
+class LazyList[A](BaseLazyList[A]):
     def __init__(self, f: Callable[[], A] | Chunked[A], init: list[A]):
 
         # Stored function always A -> A and handles internal state
@@ -143,7 +143,7 @@ class LazyStream[A](BaseLazyStream[A]):
 
         return self.function()
 
-    def map[B](self, f: Callable[[A], B]) -> LazyStream[B]:
+    def map[B](self, f: Callable[[A], B]) -> LazyList[B]:
         mapped = self.__class__(compose(f, self.original_fn),
                                 init=[self.pushback[-1] if self.pushback else self.realized[0]])
         mapped.realized = list(map(f, self.realized))    # type: ignore
@@ -151,14 +151,14 @@ class LazyStream[A](BaseLazyStream[A]):
         mapped.waiting = list(map(f, self.waiting))      # type: ignore
         mapped.seen = self.seen
 
-        return cast(LazyStream[B], mapped)
+        return cast(LazyList[B], mapped)
 
 
 #
 # Iteration
 #
 
-class LazyIteration[A](BaseLazyStream[A]):
+class LazyIteration[A](BaseLazyList[A]):
     def __init__(self, f: Callable[[A], A] | Chunked[A], init: list[A]):
         if not init:
             raise ValueError('LazyIteration requires at least one initial value.')
@@ -196,23 +196,23 @@ class LazyIteration[A](BaseLazyStream[A]):
 
         return self.function(self.realized[-1])
 
-    def to_stream(self) -> LazyStream[A]:
+    def to_stream(self) -> LazyList[A]:
         hs = self.copy()
-        return LazyStream(lambda: next(hs), hs.all_realized())
+        return LazyList(lambda: next(hs), hs.all_realized())
 
 def iterate[A](f: Callable[[A], A], x: A) -> LazyIteration[A]:
     return LazyIteration(f, init=[x])
 
-def cons(x, lazy: BaseLazyStream):
+def cons(x, lazy: BaseLazyList):
     return lazy.copy().cons(x)
 
-def take(n, lazy: BaseLazyStream):
+def take(n, lazy: BaseLazyList):
     head, _ = lazy.split_at(n)
     return head
 
-def drop(n, lazy: BaseLazyStream):
+def drop(n, lazy: BaseLazyList):
     _, tail = lazy.split_at(n)
     return tail
 
-def split_at(n, lazy: BaseLazyStream):
+def split_at(n, lazy: BaseLazyList):
     return lazy.split_at(n)

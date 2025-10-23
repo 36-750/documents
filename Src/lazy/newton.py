@@ -2,7 +2,7 @@ import math
 
 from typing import Callable
 
-from lazy   import LazyIteration, LazyStream, iterate, split_at, take
+from lazy   import LazyIteration, LazyList, iterate, split_at, take
 
 #
 # Selectors
@@ -123,14 +123,14 @@ def halve(x):
 
 def derivative(f, x, h_0):
     hs = iterate(halve, h_0)
-    # dv = LazyStream(lambda: next(hs), hs.all_realized())
+    # dv = LazyList(lambda: next(hs), hs.all_realized())
     return hs.to_stream().map(div_diff(f, x))
 
 def order(seq):
     a, b, c = take(3, seq)
     return max(1, round(math.log2((a - c) / (b - c) - 1)))
 
-# def sharpen(n, seq: LazyStream):
+# def sharpen(n, seq: LazyList):
 #     ab, rest = split_at(2, seq)
 #     a, b = ab
 #     two_n = 2 ** n
