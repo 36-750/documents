@@ -1,0 +1,21 @@
+# -*- mode: fundamental; -*-
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.hypothesis
+
+# Virtual environments
+.venv
+
+# Ignore emacs backup files (at least, the ones I generate)
+.*~
+# Ignore scratch file
+.bonz
+.save
+# Ignore mac specific junk
+.DS_Store
