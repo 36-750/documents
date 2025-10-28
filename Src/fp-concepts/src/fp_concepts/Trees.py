@@ -2,15 +2,17 @@
 # Various forms of Tree as Functors
 #
 # ruff: noqa: N801, N806, E731, EM102
+# pylint: disable=protected-access
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from functools       import partial
-from typing          import TypeGuard
+from typing          import TypeGuard, cast
 
 from .Applicative import Applicative, map2, ap
-from .Functor     import IndexedFunctor, map, imap
+from .Either      import Either, Left, Right
+from .Functor     import IndexedFunctor, map, imap  # pylint: disable=redefined-builtin
 from .List        import List
 from .Traversable import traverse, itraverse
 
@@ -37,6 +39,18 @@ class SExp(list):
     def __init__(self, xs):
         super().__init__(xs)
 
+    @classmethod
+    def of(cls, *xs):
+        return cls(list(xs))
+
+    @classmethod
+    def recurse(cls, lst):
+        def convert(xs):
+            if isinstance(xs, list):
+                return cls.recurse(xs)
+            return xs
+
+        return SExp(map(convert, lst))
 
 #
 # Binary Trees
@@ -170,6 +184,9 @@ class EmptyBinaryTree[A](AbstractBinaryTree):
         return str(self)
 
     def map[B](self, _g: Callable[[A], B]):
+        return self
+
+    def imap[I, B](self, _g: Callable[[I, A], B]):
         return self
 
     def traverse(self, f: type[Applicative], _g: Callable[[A], Applicative]) -> Applicative:  # g : a -> f b
@@ -329,14 +346,14 @@ class RoseTree[A](Applicative):
     def pure(cls, a):
         return RoseTree([a])
 
-    def map2[B, C](self, f: Callable[[A, B], C], tb: RoseTree[B]) -> RoseTree[C]:
-        new_tree: RoseTree = RoseTree([f(self._value, tb._value)])
+    def map2[B, C](self, g: Callable[[A, B], C], fb: RoseTree[B]) -> RoseTree[C]:
+        new_tree: RoseTree = RoseTree([g(self._value, fb._value)])
 
-        g = lambda sub_b: map(partial(f, self._value), sub_b)
-        h = lambda sub_a: map2(f, sub_a, tb)
+        h2 = lambda sub_b: map(partial(g, self._value), sub_b)
+        h1 = lambda sub_a: map2(g, sub_a, fb)
 
-        ab_cs = map(g, tb._children)
-        ab_cs.extend(map(h, self._children))
+        ab_cs = map(h2, fb._children)
+        ab_cs.extend(map(h1, self._children))
         new_tree._children = ab_cs
 
         return new_tree
@@ -353,3 +370,160 @@ class RoseTree[A](Applicative):
                         itraverse(lambda i, s: go(index + List.of(i), s), t._children, f))
 
         return go(List(), self)
+
+
+#
+# Leafy Binary Trees - binary trees with values only in the leaves
+#
+# type LeafyBinaryTree a = Leaf a | Branch (LeafyBinaryTree a) (LeafyBinaryTree a)
+#
+
+class LeafyBinaryTree[A](AbstractBinaryTree):
+    def __init__(self, sexp: SExp | A):
+        """Creates a Leafy Binary Tree from s-expression input. See `to_sexp`.
+
+        Currently requires all lists to be wrapped in SExp to distinguish
+        branches from leaves. This will need to be changed.
+
+        """
+        # Store node as Either[A, (LeafyBinaryTree[A], LeafyBinaryTree[A])]
+        # with Left for Leaf and Right for Branch
+        if isinstance(sexp, SExp):
+            if len(sexp) == 0:       # type: ignore
+                raise ValueError('Leafy Binary tree cannot be empty.')
+            if len(sexp) != 2:       # type: ignore
+                raise ValueError('Leafy Binary tree should have two children per branch node.')
+            left, right = sexp       # type: ignore
+            self._node: Either[A, tuple[LeafyBinaryTree[A], LeafyBinaryTree[A]]] = \
+                Right((LeafyBinaryTree(left), LeafyBinaryTree(right)))
+        else:  # Leaf node
+            self._node = Left(sexp)  # type: ignore
+
+        super().__init__()
+
+    @classmethod
+    def make(cls, node: Either[A, tuple[LeafyBinaryTree[A], LeafyBinaryTree[A]]]) -> LeafyBinaryTree[A]:
+        # ATTN: This is a hack! It fits the semantics of the function and causes no harm.
+        t = cls(None)  # type: ignore
+        t._node = node
+        return t
+
+    @classmethod
+    def leaf(cls, data: A) -> LeafyBinaryTree[A]:
+        return cls(data)
+
+    @classmethod
+    def branch(cls, left: LeafyBinaryTree[A], right: LeafyBinaryTree[A]) -> LeafyBinaryTree[A]:
+        return cls(SExp([left.to_sexp(), right.to_sexp()]))
+
+    def to_sexp(self):
+        """Converts a leaf binary tree to s-expression format.
+
+        A tree is represented by a list or tuple of the form
+            leaf or (left, right) or [left, right],
+        where left and right are either also leafy binary trees
+        in s-expression format.
+
+        Example: [1,
+                  [2, [4, Tip, Tip], [5, Tip, Tip]],
+                  [3, [6, Tip, Tip], Tip]]
+
+        When created from input, as in the BinaryTree constructor,
+        any falsy value can stand in for Tip.
+
+        This returns the s-expression as a list rather than a tuple
+        so that the result can be modified.
+
+        """
+        match self._node:
+            case Left(leaf):
+                return leaf
+
+            case Right((left, right)):
+                return SExp([left.to_sexp(), right.to_sexp()])
+
+            case _:
+                raise ValueError('Ill-formed LeafyBinaryTree: node of the wrong type')
+
+    def as_str(self, levels=None):
+        "Returns a simple string representation of this tree"
+        match self._node:
+            case Left(leaf):
+                return str(leaf) + '\n'
+
+            case Right((left, right)):
+                if levels is None:
+                    levels = []
+                indent = ''.join('\u2502  ' if level == 0 else '   ' for level in levels)
+                leadL = '\u251c\u2500 '
+                leadR = '\u2514\u2500 '
+                root = '\u2022\n'
+
+                left_s = f'{indent}{leadL}{left.as_str([*levels, 0])}'
+                right_s = f'{indent}{leadR}{right.as_str([*levels, 1])}'
+
+                return root + left_s + right_s
+
+            case _:
+                raise ValueError('Ill-formed LeafyBinaryTree: node of the wrong type')
+
+    def __str__(self):
+        return self.as_str().strip()
+
+    @classmethod
+    def unfold[B](cls, gen: Callable[[B], Either[A, tuple[B, B]]], seed: B) -> LeafyBinaryTree[A]:
+        "Creates a leafy binary tree by repeatedly unfolding a generating function from a starting seed."
+        def unfold_sexp(s):
+            match gen(s):
+                case Left(a):
+                    return a
+
+                case Right((bl, br)):
+                    return SExp([unfold_sexp(bl), unfold_sexp(br)])  # Distinguish Branch from Leaf
+
+        return cls(unfold_sexp(seed))
+
+    def map[B](self, g: Callable[[A], B]) -> LeafyBinaryTree[B]:
+        "Maps a function over this binary tree, returning a new tree."
+        match self._node:
+            case Left(leaf):
+                return cast(LeafyBinaryTree[B], self.leaf(g(leaf)))  # type: ignore
+
+            case Right((left, right)):
+                return self.branch(map(g, left), map(g, right))      # type: ignore
+
+            case _:
+                raise ValueError('Ill-formed LeafyBinaryTree: node of the wrong type')
+
+    def imap[I, B](self, g: Callable[[I, A], B]):
+        "Maps an indexed function over this binary tree, returning a new tree."
+        def go(index, tree):
+            match tree._node:
+                case Left(leaf):
+                    return self.leaf(g(index, leaf))
+
+                case Right((left, right)):
+                    return self.branch(go(index + List.of(0), left), go(index + List.of(1), right))
+
+                case _:
+                    raise ValueError('Ill-formed LeafyBinaryTree: node of the wrong type')
+        return go(List(), self)
+
+    @staticmethod
+    def _lbt_traverse(_effect, node_f, subtree_f, t):
+        match t._node:  # pylint: disable=protected-access
+            case Left(leaf):
+                return map(LeafyBinaryTree.leaf, node_f(leaf))
+
+            case Right((left, right)):
+                fl = subtree_f(left)
+                fr = subtree_f(right)
+                return ap(LeafyBinaryTree.branch, fl, fr)
+
+            case _:
+                raise ValueError('Ill-formed LeafyBinaryTree: node of the wrong type')
+
+    def traverse(self, f: type[Applicative], g: Callable[[A], Applicative]) -> Applicative:  # g : a -> f b
+        def inorder(tree):
+            return self._lbt_traverse(f, g, inorder, tree)
+        return inorder(self)
