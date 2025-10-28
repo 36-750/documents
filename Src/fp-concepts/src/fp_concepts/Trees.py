@@ -435,7 +435,7 @@ class LeafyBinaryTree[A](AbstractBinaryTree):
         so that the result can be modified.
 
         """
-        match self._node:
+        match self.root:
             case Left(leaf):
                 return leaf
 
@@ -447,7 +447,7 @@ class LeafyBinaryTree[A](AbstractBinaryTree):
 
     def as_str(self, levels=None):
         "Returns a simple string representation of this tree"
-        match self._node:
+        match self.root:
             case Left(leaf):
                 return str(leaf) + '\n'
 
@@ -470,6 +470,10 @@ class LeafyBinaryTree[A](AbstractBinaryTree):
     def __str__(self):
         return self.as_str().strip()
 
+    @property
+    def root(self):
+        return self._node
+
     @classmethod
     def unfold[B](cls, gen: Callable[[B], Either[A, tuple[B, B]]], seed: B) -> LeafyBinaryTree[A]:
         "Creates a leafy binary tree by repeatedly unfolding a generating function from a starting seed."
@@ -485,7 +489,7 @@ class LeafyBinaryTree[A](AbstractBinaryTree):
 
     def map[B](self, g: Callable[[A], B]) -> LeafyBinaryTree[B]:
         "Maps a function over this binary tree, returning a new tree."
-        match self._node:
+        match self.root:
             case Left(leaf):
                 return cast(LeafyBinaryTree[B], self.leaf(g(leaf)))  # type: ignore
 
@@ -498,7 +502,7 @@ class LeafyBinaryTree[A](AbstractBinaryTree):
     def imap[I, B](self, g: Callable[[I, A], B]):
         "Maps an indexed function over this binary tree, returning a new tree."
         def go(index, tree):
-            match tree._node:
+            match tree.root:
                 case Left(leaf):
                     return self.leaf(g(index, leaf))
 
@@ -511,7 +515,7 @@ class LeafyBinaryTree[A](AbstractBinaryTree):
 
     @staticmethod
     def _lbt_traverse(_effect, node_f, subtree_f, t):
-        match t._node:  # pylint: disable=protected-access
+        match t.root:
             case Left(leaf):
                 return map(LeafyBinaryTree.leaf, node_f(leaf))
 

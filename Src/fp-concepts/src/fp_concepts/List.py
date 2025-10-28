@@ -259,7 +259,7 @@ def append_[A](ls: List[A], x: A) -> List[A]:
 # type NonEmptyList a = Cons a (List a)
 #
 
-class NonEmptyList(List):
+class NonEmptyList[A](List[A]):
     def __init__(self, xs):
         if len(xs) == 0:
             raise ValueError('NonEmptyList cannot be empty')
@@ -268,6 +268,7 @@ class NonEmptyList(List):
     # Maintain non-empty invariant on removal operations
 
     def __delitem__(self, key):
+        # pylint: disable=too-many-boolean-expressions
         if isinstance(key, slice):
             start, stop, step = key.indices(len(self))
             # ATTN: Check this test when step > 1, just a quick stab here
@@ -288,7 +289,7 @@ class NonEmptyList(List):
             raise ValueError('remove would delete the only element of a NonEmptyList')
         super().remove(value)
 
-    def pop(self, index=-1, /):
+    def pop(self, index=-1, /) -> A:
         if len(self) == 1:
             raise ValueError(f'pop({index}) would delete the only element of a NonEmptyList')
         return super().pop(index)
