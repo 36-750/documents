@@ -1,0 +1,50 @@
+* Exercises
+
+  Here, we will do some brief practice with CRUD operations by generating
+  a table of random data and playing with it.
+
+  1. Create a table ~rdata~ with five columns: one =integer= column ~id~,
+     two =text= columns ~a~ and ~b~, one =date= ~moment~, and one =numeric= column ~x~. Be
+     sure to list them in that order.
+
+  2. Fill the table with data using this command:
+     (modify the path to 'rdata.csv' to be correct for your computer)
+
+     #+begin_src sql :engine postgresql
+       \COPY rdata FROM 'rdata.csv' WITH DELIMITER ',';
+     #+end_src
+
+     Use a =SELECT= to preview the first 10 rows so you see what kind of data is
+     inside.
+
+  3. Use =SELECT= to display rows of the table for which ~b~ is equal
+     to a particular choice.
+
+  4. Use =SELECT= with the =overlaps= operator on dates to find all rows with ~moment~
+     in the month of November 2017. You can find functions for working on dates
+     and times [[https://www.postgresql.org/docs/current/functions-datetime.html][in the manual]] if you need them.
+
+     The =OVERLAPS= operator is a binary operator that can tell if two date
+     intervals overlap:
+
+     #+begin_src sql :engine postgresql
+       SELECT ('2020-10-01'::date, '2020-10-01'::date) OVERLAPS ('2020-09-24'::date, '2020-10-14'::date);
+     #+end_src
+
+     Then use a query to calculate the minimum, maximum, and average of ~x~ for
+     all rows whose ~moment~ is in the month of November.
+
+  5. Use =UPDATE= to set the value of ~b~ to a fixed choice for all rows whose ~id~ is
+     divisible by 3 and 5.
+
+  6. Use =DELETE= to remove all rows for which ~id~ is even
+     and greater than 2. (Hint: =%= is the mod operator.)
+
+  7. Use a few more =DELETE='s (four more should do it) to remove all
+     rows where ~id~ is not prime.
+
+  8. Use =SELECT= with either the =~*= or =ilike= operators to display rows
+     for which ~a~ matches a specific pattern, e.g.,
+     #+begin_src sql :engine postgresql
+       select * from rdata where a ~* '[0-9][0-9][a-c]a';
+     #+end_src
