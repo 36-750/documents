@@ -13,7 +13,7 @@ def run(tokens):
     print('ast:')
     match p:
         case Failure():
-            print('  ', p)
+            print(' ', p)
             ok = False
         case _:
             print(p.pretty(1, indent=2))
@@ -21,7 +21,7 @@ def run(tokens):
     print('interpeted:')
     try:
         if ok:
-            print('  ', interpret(p))
+            print(' ', interpret(p))
         else:
             print('  AST not available for interpreter')
     except InterpreterError as e:
@@ -32,7 +32,7 @@ def run(tokens):
     try:
         if ok:
             c = compile(p)
-            print('  ', c)
+            print(' ', c)
         else:
             print('  AST not available for compilation')
     except CompilerError as e:
@@ -42,7 +42,7 @@ def run(tokens):
     print('run in vm:')
     try:
         if ok:
-            print('  ', run_vm(c))
+            print(' ', run_vm(c))
         else:
             print('  No compiler output available')
     except VMError as e:

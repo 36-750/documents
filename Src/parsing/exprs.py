@@ -52,6 +52,9 @@ from __future__ import annotations
 
 import enum as E   # enum is a combinator
 
+from pyrsistent        import pmap
+from pyrsistent.typing import PMap
+
 from combinators import (Parser, Success, Failure, parse, failure,
                          pure, fmap, pipe, fix,
                          seq, follows, followedBy, between,
@@ -243,7 +246,7 @@ class InterpreterError(ValueError):
 def interpret(e: Expr, env=None):
     "An AST interpreter"
     if env is None:
-        env = {}
+        env = pmap()
 
     match e:
         case Num(x):
@@ -274,8 +277,8 @@ def interpret(e: Expr, env=None):
                     return lval / rval
 
         case Let(name, binding, value):
-            env[name] = interpret(binding, env)
-            return interpret(value, env)
+            bound_to = interpret(binding, env)
+            return interpret(value, env.set(name, bound_to))
 
         case other:
             raise InterpreterError(f'Unrecognized constructor {other}')
@@ -357,7 +360,7 @@ def compile(ast: Expr) -> bytes:
 
     program = bytearray()
 
-    def go(env: dict[str, int], stack_ptr: int, instruction_ptr: int, e: Expr) -> tuple[int, int]:
+    def go(env: PMap[str, int], stack_ptr: int, instruction_ptr: int, e: Expr) -> tuple[int, int]:
         match e:
             case Num(x):
                 if x < -NUM_LIMIT or x > NUM_LIMIT - 1:  # Twos complement
@@ -367,7 +370,7 @@ def compile(ast: Expr) -> bytes:
 
                 program.append(Opcode.PUSH)
                 program.extend(x_bytes)
-                return (stack_ptr + 1, instruction_ptr + 3)
+                return (stack_ptr + 1, instruction_ptr + 1 + NUM_BYTES)
 
             case Binop(op, left, right):
                 spl, ipl = go(env, stack_ptr, instruction_ptr, left)
@@ -380,19 +383,18 @@ def compile(ast: Expr) -> bytes:
                     raise CompilerError(f'Variable {name} used before it is bound to a value.')
                 program.append(Opcode.SREF)
                 program.extend(env[name].to_bytes(NUM_BYTES, 'little', signed=True))
-                return (stack_ptr + 1, instruction_ptr + 2)
+                return (stack_ptr + 1, instruction_ptr + 1 + NUM_BYTES)
 
             case Let(name, binding, value):
                 spb, ipb = go(env, stack_ptr, instruction_ptr, binding)
-                env[name] = stack_ptr
-                spbody, ipbody = go(env, spb, ipb, value)
+                spbody, ipbody = go(env.set(name, stack_ptr), spb, ipb, value)
                 program.append(Opcode.FIRST)
                 return (spbody - 1, ipbody + 1)
 
             case other:
                 raise InterpreterError(f'Unrecognized constructor {other}')
 
-    go({}, 0, 0, ast)
+    go(pmap(), 0, 0, ast)
     return program
 
 
