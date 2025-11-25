@@ -1,0 +1,19 @@
+state a
+state b
+
+transition one from c to a
+transition two from a, b to c
+transition three from b to c, d
+transition six from b to d or from d to e
+
+delegate input to one
+
+action on enter a
+  | print("hello")
+  | do_something()
+end
+
+action during two with event, source, target
+  | AI prompt: write me code that changes
+  | the count between source and target.
+end
