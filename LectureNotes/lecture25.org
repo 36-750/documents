@@ -1,0 +1,141 @@
+#+TITLE: Proof Assistants
+#+SUBTITLE: Lecture 25
+#+DATE: Tue 02 Dec 2025
+
+* A Motivation
+
+  Load the function =add2= from files =add2.py= or =add2.r=
+  *without looking at the code*.
+
+  The function =add2(x, y)= is supposed to add two integers
+  =x= and =y=. How would you test/validate this? Try it.
+
+* Proof over Tests?
+
+  Write the function =leftpad : Int -> a -> List a -> List a=.
+  (You can specialize this to strings if you like:
+   =leftpad : Int -> Char -> String -> String=.)
+
+  #+begin_example
+    leftpad(5, '@', "foo")
+    #=> @@foo
+
+    leftpad(5, '@', "foobar")
+    #=> foobar
+
+    leftpad(7, '@', "foobar")
+    #=> @foobar
+  #+end_example
+
+  How do we /prove/ that your code is correct?
+
+  leftpad(n, pad, s)
+
+  #+begin_example
+  1. len(s) >= n => leftpad(n, *, s) == s
+  2. len(s) < n => pad * (n - s) + s 
+  #+end_example
+
+** Properties
+
+  This satisfies three properties:
+
+  1. The length of =leftpad(n, c, s)= is max(n, len(s))
+
+  2. The suffix of the output is the original string s.
+
+  3. The prefix of the output consists of only padding
+     characters =c= or is empty, as regex '=c*='.
+
+* Recap: Propositions as Types
+
+  Slides from Lecture 6.
+
+* Proof Assistants
+
+  Roq, Agda, Lean, Isabelle, ..., Idris, ..., Z3, ....
+
+  See [[file:~/tmp/LeanTest][LeanTest in VSCode]] below
+
+  #+begin_src lean
+    import LeanTest.Basic
+    import Mathlib.Algebra.Group.Even
+    import Mathlib.Tactic.Ring
+     
+    def m : Nat := 1
+    def t : Type := Nat → Nat
+     
+    #eval (fun x : Nat => x * 10) (m + 1)
+     
+    def times (x : Nat) (y : Nat) : Nat := x * y
+     
+    #check times 4
+     
+    example : ∀ m n : Nat, Even n → Even (m * n) := by
+      rintro m n ⟨k, hk⟩
+      use m * k
+      rw [hk]
+      ring
+     
+    example (α : Type) (p q : α → Prop) :
+        (∀ x : α, p x ∧ q x) → ∀ y : α, p y :=
+      fun h : ∀ x : α, p x ∧ q x =>
+      fun y : α =>
+      show p y from (h y).left
+     
+    theorem test (p q : Prop) (hp : p) (hq : q) : p ∧ q ∧ p := by
+      apply And.intro
+      case left => exact hp
+      case right =>
+        apply And.intro
+        case left => exact hq
+        case right => exact hp
+     
+    example (p q : α → Prop) : (∃ x, p x ∨ q x) → ∃ x, q x ∨ p x := by
+      intro
+      | ⟨w, Or.inl h⟩ => exact ⟨w, Or.inr h⟩
+      | ⟨w, Or.inr h⟩ => exact ⟨w, Or.inl h⟩
+  #+end_src
+
+* Back to leftpad
+
+  https://github.com/hwayne/lets-prove-leftpad
+
+  - Z3/Python
+  - Idris
+  - Lean 4
+
+** TL1 Version 
+
+   Based on idris proof by porglezomp
+
+   #+begin_src idris
+     eqMax : (n, k : Nat) -> maximum k n === plus (n `monus` k) k
+     eqMax  n        Zero    = rewrite monusZeroRight n 
+                               in rewrite plusZeroRightNeutral n 
+                                  in Refl
+     eqMax  Zero    (Succ _) = Refl
+     eqMax (Succ n) (Succ k) = rewrite sym $ plusSuccRightSucc (n `monus` k) k 
+                               in rewrite eqMax n k
+                                  in Refl
+
+     leftPad : (x : a) -> (n : Nat) -> (xs : Vec k a)
+            -> (ys : Vec (maximum k n) a ## m : Nat ## ys === replicate m x ++ xs)
+     leftPad {k} x n xs = rewrite eqMax n k
+                          in
+                           (replicate (n `monus` k) x ++ xs ## n `monus` k ## Refl)
+   #+end_src
+
+* Mathematics and Computation
+
+  https://adam.math.hhu.de/#/
+
+* Resources
+
+  + [[https://www.uv.es/coslloen/Arxiu/Fitxers/An-introduction-to-Lean-4.pdf][Introduction to Lean 4]]
+  + [[https://lean-lang.org/functional_programming_in_lean/][Functional Programming in Lean 4]]
+  + [[https://lean-lang.org/theorem_proving_in_lean4/][Theorem Proving in Lean 4]]
+  + [[https://lean-lang.org/doc/reference/latest/Tactic-Proofs/Tactic-Reference/][Tactics Reference]]
+  + [[https://leanprover-community.github.io/mathematics_in_lean/index.html][Mathematics in Lean]]
+  + [[https://raw.githubusercontent.com/fpvandoorn/LeanCourse24/master/lean-tactics.pdf][Lean Tactics Cheatsheet]]
+
