@@ -1,0 +1,104 @@
+#+TITLE: Wrapup
+#+SUBTITLE: Lecture 26
+#+DATE: Thu 04 Dec 2025
+
+* Puzzlers
+
+  1. What does this represent?  =cochoice : (Either a c -> Either c b) -> a -> b=
+
+     #+begin_src idris
+       cochoice : (Either a c -> Either b c) -> a -> b
+       cochoice f = go . Left
+         where
+           go : Either a c -> b
+           go eac =
+             case f eac of
+               Left b -> b
+               Right c -> go (Right c)
+     #+end_src
+
+  2. =fix= and the Z-combinator
+
+     Eager fix:
+     #+begin_src python
+       def fix(f):
+           "The Z-combinator for finding fixed points in an eager language."
+           def z(u):
+               return f(lambda x: u(u)(x))
+           return z(z)
+     #+end_src
+
+     /Lazy/ fix:
+     #+begin_src haskell
+       fix : (a -> a) -> a
+       fix f = 
+           let x = f x 
+            in x
+     #+end_src
+
+     What does this mean? Try =fix identity=.  It fails....
+
+     Choose a different type for =a=:
+     #+begin_src haskell
+       fix : ((b -> c) -> b -> c) -> b -> c
+
+       cosF x =
+         fix (\f b -> 
+                 if cos b == b 
+                  then b
+                  else f (cos b)
+              ) x
+
+       last : List a -> Maybe a
+       last [] = Nothing
+       last [x] = Some x
+       last (x :: xs) = last xs
+
+       lastF = fix $ \recurse xs ->
+           case xs of
+               [] -> 
+                   Nothing
+               [x] -> 
+                   Just x
+               (x :: xs) -> 
+                   recurse xs
+
+       map : (a -> b) -> List a -> List b
+       map _ [] = []
+       map f (x :: xs) = f x :: map f xs
+        
+       mapF f = fix $ \recurse list ->
+           case list of
+               [] -> []
+               (x :: xs) -> f x :: recurse xs
+     #+end_src
+
+* Comments on Tooling     
+
+   + nushell
+   + ripgrep
+   + rsync
+   + fzf  (see also zoxide)
+   + difftastic
+   + httpie (also curl)
+   + jq
+   + curl cheat.sh
+  
+   Honorable mention replacements for common commands:
+   + ov
+   + exa
+   + bat
+   + rip (rm-improved)
+  
+   See also:
+   + https://github.com/alebcay/awesome-shell
+   + https://github.com/agarrharr/awesome-cli-apps
+   + https://github.com/k4m4/terminals-are-sexy
+
+* Finish Leftpad in Lean
+
+  See also https://leanprover-community.github.io/blog/posts/simp-made-simple/
+
+* A Brief Tour of Complexity
+
+  See PDF doc.
